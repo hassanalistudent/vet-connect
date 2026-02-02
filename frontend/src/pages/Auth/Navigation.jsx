@@ -3,6 +3,7 @@ import {
   AiOutlineHome,
   AiOutlineLogin,
   AiOutlineUserAdd,
+   AiOutlineUser
 } from "react-icons/ai";
 import { FaUserMd, FaDog } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
@@ -47,6 +48,14 @@ const Navigation = () => {
           <AiOutlineHome className="mr-2" size={26} />
           <span className="hidden nav-item-name">HOME</span>
         </Link>
+        
+        {/* ✅ DOCTORS - Only show for PetOwner */}
+        {userInfo?.role === "PetOwner" && (
+          <Link to="petowner/vets" className="flex items-center">
+            < AiOutlineUser className="mr-2" size={26} />
+            <span className="hidden nav-item-name">DOCTORS</span>
+          </Link>
+        )}
       </div>
 
       {/* User dropdown */}
@@ -170,19 +179,18 @@ const Navigation = () => {
                     Appointments
                   </Link>
                 </li>
-                 <li>
-              <Link
-                to="petowner/profile"
-                className="block px-4 py-2 hover:bg-gray-100"
-              >
-                Profile
-              </Link>
-            </li>
+                <li>
+                  <Link
+                    to="/petowner/profile"
+                    className="block px-4 py-2 hover:bg-gray-100"
+                  >
+                    Profile
+                  </Link>
+                </li>
               </>
             )}
 
             {/* Common links */}
-           
             <li>
               <Link
                 onClick={logoutHandler}

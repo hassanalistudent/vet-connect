@@ -90,6 +90,15 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
+    // get doctors
+     getDoctors: builder.query({
+      query: () => ({
+        url: `${USERS_URL}/doctors`,
+        method: 'GET',
+      }),
+      providesTags: ['Doctor'],
+      keepUnusedDataFor: 5,
+    }),
   }),
 });
 
@@ -104,4 +113,5 @@ export const {
   useDeleteUserMutation,
   useGetUserDetailsQuery,
   useUpdateUserMutation,
+  useGetDoctorsQuery,
 } = userApiSlice;

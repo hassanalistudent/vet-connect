@@ -335,6 +335,33 @@ const updateUserById = asyncHandler(async (req, res) => {
 
 // Add this function to your userController.js
 
+// ✅ Add this controller to get ALL DOCTORS (Admin Only)
+const getAllDoctors = asyncHandler(async (req, res) => {
+  // Find users with role "Doctor" and populate their doctorProfile
+  const doctors = await User.find({ role: "Doctor" })
+    .select("-password") // Exclude password
+    .populate({
+      path: "doctorProfile",
+      model: DoctorProfile,
+      populate: {
+        path: 'userId', // Optional: also populate back to user basic info
+        select: 'fullName email phone'
+      }
+    })
+    .lean(); // Use lean() for better performance
+
+  if (doctors.length === 0) {
+    return res.status(404).json({ 
+      message: "No doctors found" 
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    count: doctors.length,
+    doctors
+  });
+});
 
 
 export {
@@ -348,4 +375,5 @@ export {
   getUserById,
   updateUserById,
   createProfile,
+  getAllDoctors
 };

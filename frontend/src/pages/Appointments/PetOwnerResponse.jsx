@@ -124,7 +124,7 @@ const PetOwnerResponse = () => {
         </div>
 
         {/* ✅ SEPARATED: Owner Actions */}
-        {isOwner && appointment.status !== "Completed" && (
+        {isOwner && appointment.status !== "Completed" && appointment.status !== "Cancelled" && (
           <OwnerActions
             appointment={appointment}
             appointmentId={id}

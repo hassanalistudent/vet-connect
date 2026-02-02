@@ -11,6 +11,7 @@ import {
   deleteUserById,
   getUserById,
   updateUserById,
+  getAllDoctors,
   createProfile, // ← ADD THIS IMPORT
 } from "../controllers/userController.js"; // ← ADD to your controller
 
@@ -30,6 +31,8 @@ router.route("/profile")
 // Admin routes
 router.route("/")
   .get(authenticate, authorizeAdmin, getAllUsers);
+
+router.route("/doctors").get( getAllDoctors);
 
 router.route("/:id")
   .delete(authenticate, authorizeAdmin, deleteUserById)

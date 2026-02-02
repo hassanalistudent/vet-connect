@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 
 const OwnerActions = ({ appointment, appointmentId, ownerResponse, markPaid, refetch }) => {
   // ✅ Owner logic: Can act on Scheduled OR Rescheduled
-  const canOwnerAct = ["Scheduled", "Rescheduled"].includes(appointment?.status);
+  const canOwnerAct = ["Rescheduled","Accepted"].includes(appointment?.status);
   const isPaid = appointment?.isPaid || false;
   const isCompleted = appointment?.status === "Completed";
 
