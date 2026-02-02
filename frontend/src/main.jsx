@@ -46,7 +46,7 @@ const router = createBrowserRouter(
       <Route  path="" element={<PrivateRouter/>}>
       <Route  path=":doctorId/newappointment" element={<CreateAppointment/>}/>
       <Route  path="pet/:id" element={<PetDetails/>}/>
-      <Route  path="video" element={<VideoSession/>}/>
+      <Route  path=":appointmentId/video" element={<VideoSession/>}/>
       <Route  path="petowner" element={<PetOwnerRoute/>}>
           <Route  path="profile" element={<PetOwnerProfile/>}/>
           <Route  path="mypets" element={<UserPets/>}/>
