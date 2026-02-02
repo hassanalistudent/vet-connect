@@ -32,6 +32,7 @@ import PetOwnerAppointments from "./pages/Appointments/PetOwnerAppointments.jsx"
 import AdminAllAppointments from "./pages/Appointments/AdminAllAppointments.jsx";
 import CreateAppointment from "./pages/Appointments/CreateAppointment.jsx";
 import AllDoctors from "./pages/User/AllDoctors.jsx";
+import VideoSession from "./pages/Appointments/VideoSession.jsx";
 
 
 const router = createBrowserRouter(
@@ -45,6 +46,7 @@ const router = createBrowserRouter(
       <Route  path="" element={<PrivateRouter/>}>
       <Route  path=":doctorId/newappointment" element={<CreateAppointment/>}/>
       <Route  path="pet/:id" element={<PetDetails/>}/>
+      <Route  path="video" element={<VideoSession/>}/>
       <Route  path="petowner" element={<PetOwnerRoute/>}>
           <Route  path="profile" element={<PetOwnerProfile/>}/>
           <Route  path="mypets" element={<UserPets/>}/>
