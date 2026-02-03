@@ -33,6 +33,7 @@ import AdminAllAppointments from "./pages/Appointments/AdminAllAppointments.jsx"
 import CreateAppointment from "./pages/Appointments/CreateAppointment.jsx";
 import AllDoctors from "./pages/User/AllDoctors.jsx";
 import VideoSession from "./pages/Appointments/VideoSession.jsx";
+import CompleteAppointment from "./pages/Appointments/CompleteAppointment.jsx";
 
 
 const router = createBrowserRouter(
@@ -60,6 +61,7 @@ const router = createBrowserRouter(
           <Route  path="profile" element={<DoctorProfile/>}/>
           <Route  path="doctor-appointments" element={<DoctorAppointments/>}/>
           <Route  path=":id/doctor-response" element={<DoctorResponse/>}/>
+          <Route  path=":appointmentId/complete" element={<CompleteAppointment/>}/>
       </Route>
       <Route  path="admin" element={<AdminRoute/>}>
           <Route  path="userslist" element={<UserList/>}/>

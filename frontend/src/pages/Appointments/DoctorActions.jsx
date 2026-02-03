@@ -1,4 +1,4 @@
-// src/pages/DoctorActions.jsx - ✅ ACCEPTED → COMPLETE SECTION
+// src/pages/DoctorActions.jsx - ✅ VIDEO CALL + ACCEPTED/PAID LOGIC
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -10,9 +10,10 @@ const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) 
     appointmentTime: "",
   });
 
-  // ✅ Doctor logic: Scheduled = Quick Actions, Accepted = Complete
+  // ✅ Updated logic: Video call + Accepted + Paid only
+  const isVideoCall = appointment?.appointmentType?.toLowerCase().includes("video");
   const canDoctorQuickAct = appointment?.status === "Scheduled";
-  const canDoctorComplete = appointment?.status === "Accepted";
+  const canDoctorComplete = appointment?.status === "Accepted" && appointment?.isPaid;
   const isCompleted = appointment?.status === "Completed";
 
   useEffect(() => {
@@ -64,15 +65,51 @@ const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) 
       );
     }
 
-    // ✅ ACCEPTED → SHOW COMPLETE SECTION (2-column)
+    // ✅ VIDEO CALL → REDIRECT TO VIDEO
+    if (isVideoCall && canDoctorComplete) {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+          {/* Left: Video Call Info */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-12 rounded-3xl shadow-2xl border-2 border-purple-200 flex flex-col items-center justify-center text-center">
+            <div className="text-5xl mb-6">📹</div>
+            <h3 className="text-3xl font-bold text-purple-700 mb-4">Video Consultation</h3>
+            <p className="text-xl text-purple-600 mb-6">{appointment.petId.petName || 'Pet'}</p>
+            <div className="text-2xl font-bold text-gray-700">
+              {appointment?.appointmentDate} at {appointment?.appointmentTime}
+            </div>
+          </div>
+
+          {/* Right: Video Call Button */}
+          <div className="bg-white p-8 rounded-2xl shadow-xl border-2 border-purple-300 flex flex-col justify-center">
+            <h4 className="text-2xl font-bold text-purple-700 mb-8 flex items-center gap-4 text-center">
+              🎥 Start Video Call
+            </h4>
+            <Link
+              to={`/${appointmentId}/video`}
+              className="w-full block bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xl font-bold py-8 px-12 rounded-3xl shadow-2xl hover:shadow-3xl transition-all flex items-center gap-4 justify-center text-decoration-none mx-auto max-w-md"
+            >
+              📱 Join Video Consultation
+            </Link>
+            <p className="text-sm text-purple-700 mt-6 text-center">
+              Click to start video call with pet owner
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // ✅ ACCEPTED + PAID → COMPLETE APPOINTMENT
     if (canDoctorComplete) {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
           {/* Left: Status Info */}
           <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-12 rounded-3xl shadow-2xl border-2 border-emerald-200 flex flex-col items-center justify-center text-center">
             <div className="text-5xl mb-6">✅</div>
-            <h3 className="text-3xl font-bold text-emerald-700 mb-4">Appointment Accepted</h3>
-            <p className="text-xl text-emerald-600 mb-6">Ready for consultation</p>
+            <h3 className="text-3xl font-bold text-emerald-700 mb-4">Ready to Complete</h3>
+            <p className="text-xl text-emerald-600 mb-6">
+              ✓ Accepted <br />
+              ✓ Paid ✅
+            </p>
             <div className="text-2xl font-bold text-gray-700">
               {appointment?.appointmentDate} at {appointment?.appointmentTime}
             </div>
@@ -98,22 +135,22 @@ const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) 
     }
 
     // ✅ NOT ACTIONABLE
-    if (!canDoctorQuickAct && !canDoctorComplete) {
+    if (!canDoctorQuickAct && !canDoctorComplete ) {
       return (
         <div className="col-span-full p-12 bg-gradient-to-br from-yellow-50 to-orange-100 rounded-3xl border-2 border-yellow-200 text-center flex flex-col items-center justify-center">
           <div className="text-6xl mb-4">⏳</div>
           <h3 className="text-2xl font-bold text-yellow-700 mb-2">
-            Status: {appointment?.status}
+            Status: {appointment?.status} {appointment?.isPaid ? '(Paid)' : '(Pending Payment)'}
           </h3>
           <p className="text-gray-600 text-lg">Waiting for action</p>
         </div>
       );
     }
 
-    // ✅ SCHEDULED → QUICK ACTIONS (Original 2-column)
+    // ✅ SCHEDULED → QUICK ACTIONS (REMOVED Complete button)
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Quick Actions Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+        {/* Quick Actions Form ONLY */}
         <form onSubmit={handleDoctorResponse} className="bg-white p-8 rounded-2xl shadow-xl border border-pink-200">
           <h4 className="text-xl font-bold text-pink-600 mb-6 flex items-center gap-3">
             🩺 Quick Actions
@@ -168,22 +205,6 @@ const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) 
              "Update Status"}
           </button>
         </form>
-
-        {/* Complete Button - Available for Scheduled */}
-        <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-8 rounded-2xl shadow-xl border-2 border-emerald-200 flex flex-col justify-center hover:shadow-2xl transition-all">
-          <h4 className="text-xl font-bold text-emerald-700 mb-6 flex items-center gap-3">
-            🏥 Complete Appointment
-          </h4>
-          <Link
-            to={`/doctor/appointments/${appointmentId}/complete`}
-            className="w-full block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-lg font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-3xl transition-all flex items-center gap-3 justify-center"
-          >
-            ✅ Complete & Create Medical Record
-          </Link>
-          <p className="text-sm text-emerald-700 mt-4 text-center">
-            Mark as done after consultation
-          </p>
-        </div>
       </div>
     );
   };
@@ -198,7 +219,7 @@ const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) 
           appointment?.status === "Completed" ? "bg-green-100 text-green-800" :
           "bg-gray-100 text-gray-800"
         }`}>
-          {appointment?.status || "Scheduled"}
+          {appointment?.status || "Scheduled"} {appointment?.isPaid && "💰"}
         </span>
       </h3>
       
