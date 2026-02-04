@@ -12,15 +12,25 @@ import {
   getUserById,
   updateUserById,
   getAllDoctors,
-  createProfile, // ← ADD THIS IMPORT
-} from "../controllers/userController.js"; // ← ADD to your controller
+  verifyEmail,        // ✅ email verification
+  createProfile,      // ✅ profile creation
+  resendVerification, // ✅ resend verification controller
+  forgotPassword,     // ✅ forgot password controller
+  resetPassword,       // ✅ reset password controller
+ checkVerified
+} from "../controllers/userController.js";
 
 import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
 
 // Public routes
-router.route("/").post(createUser);           
-router.route("/auth").post(loginUser);       
-router.route("/logout").post(logoutCurrentUser); 
+router.route("/").post(createUser);            
+router.route("/auth").post(loginUser);        
+router.route("/logout").post(logoutCurrentUser);  
+router.route("/verify-email").get(verifyEmail);   
+router.route("/resend-verification").post(resendVerification); 
+router.route("/forgot-password").post(forgotPassword);         
+router.route("/reset-password/:token").post(resetPassword);    // ✅ NEW
+router.route("/verify").get(authenticate,checkVerified);    // ✅ NEW
 
 // Authenticated user routes
 router.route("/profile")
@@ -32,14 +42,11 @@ router.route("/profile")
 router.route("/")
   .get(authenticate, authorizeAdmin, getAllUsers);
 
-router.route("/doctors").get( getAllDoctors);
+router.route("/doctors").get(getAllDoctors);
 
 router.route("/:id")
   .delete(authenticate, authorizeAdmin, deleteUserById)
   .get(authenticate, getUserById)
   .put(authenticate, authorizeAdmin, updateUserById);
-
-// ← ADD THIS: User-specific pets route
-
 
 export default router;

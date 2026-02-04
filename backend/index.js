@@ -1,8 +1,10 @@
 // backend/index.js - ✅ CORS FIXED
+import dotenv from "dotenv";
+dotenv.config();
+
 import path from "path";
 import express from "express";
 import cors from "cors";  // ✅ ADD THIS IMPORT
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/userRoutes.js";
 import petRoutes from "./routes/petRoutes.js";
@@ -11,7 +13,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
 import connectDB from "./config/db.js";
 
-dotenv.config();
+
 const port = process.env.PORT || 5000;
 
 connectDB();

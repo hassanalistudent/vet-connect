@@ -1,12 +1,14 @@
 import User from "../models/user.js";
-import Pet from "../models/pet.js";
 import DoctorProfile from "../models/doctorProfile.js";
 import PetOwnerProfile from "../models/petOwnerProfile.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import bcrypt from "bcryptjs";
 import createToken from "../utils/createToken.js";
+import {  setVerificationToken, verifyEmailToken } from "../utils/verificationToken.js";
+import {sendVerificationEmail,sendPasswordResetEmail} from "../servises/emailService.js";
 
-// Register new user
+
+// ✅ Register new user with email verification
 const createUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, password, role } = req.body;
 
@@ -31,36 +33,169 @@ const createUser = asyncHandler(async (req, res) => {
   });
 
   await newUser.save();
-  createToken(res, newUser._id);
+
+  // Generate verification token and send email
+  const token = await setVerificationToken(newUser);
+  await sendVerificationEmail(newUser.email, token);
 
   res.status(201).json({
+    message: "Signup successful. Please check your email to verify your account.",
     _id: newUser._id,
     fullName: newUser.fullName,
     email: newUser.email,
     phone: newUser.phone,
     role: newUser.role,
+    isVerified: newUser.isVerified,
   });
 });
 
-// Login user
+// ✅ Login user with verification check
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-  if (user && (await bcrypt.compare(password, user.password))) {
-    createToken(res, user._id);
+  if (!user) {
+    return res.status(401).json({ message: "Invalid email or password" });
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ message: "Invalid email or password" });
+  }
+
+  // Check if user has verified email
+  if (!user.isVerified) {
+    return res.status(403).json({ message: "Please verify your email before logging in.Check Your inbox" });
+  }
+
+  // Issue JWT token only if verified
+  createToken(res, user._id);
+
+  res.status(200).json({
+    _id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    isVerified: user.isVerified,
+  });
+});
+
+// ✅ Verify email route
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token, email } = req.query;
+
+  try {
+    const user = await verifyEmailToken(email, token);
 
     res.status(200).json({
+      message: "✅ Email verified successfully!",
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
-      phone: user.phone,
       role: user.role,
+      isVerified: user.isVerified,
     });
-  } else {
-    res.status(401).json({ message: "Invalid email or password" });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
+
+const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  if (user.isVerified) {
+    return res.status(400).json({ message: "User is already verified" });
+  }
+
+  // Generate new token + send email
+  const token = await setVerificationToken(user);
+  await sendVerificationEmail(user.email, token);
+
+  res.status(200).json({
+    message: "Verification email resent. Please check your inbox.",
+  });
+});
+
+
+// ✅ Forgot Password: FIXED field names
+const forgotPassword = asyncHandler(async (req, res) => {
+  
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  // 🔥 FIXED: Your utility uses verificationTokenExpiry ✅
+  const token = await setVerificationToken(user);
+  
+  const savedUser = await User.findById(user._id);
+
+  await sendPasswordResetEmail(user.email, token);
+  
+  res.status(200).json({ 
+    message: "Password reset email sent. Please check your inbox." ,
+
+  });
+});
+
+// ✅ Reset Password: FIXED field names
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ message: "Password is required" });
+  }
+
+  // 🔥 FIXED: Match your model/utility field name
+  const user = await User.findOne({
+    verificationToken: token,
+    verificationTokenExpiry: { $gt: Date.now() }  // 👈 verificationTokenExpiry
+  });
+
+  if (!user) {
+    
+    return res.status(400).json({ message: "Invalid or expired reset token" });
+  }
+
+  // Hash new password
+  user.password = await bcrypt.hash(password, 12);
+  
+  // Clear token fields - match model
+  user.verificationToken = undefined;
+  user.verificationTokenExpiry = undefined;  // 👈 FIXED
+
+  await user.save();
+
+  res.status(200).json({ message: "Password reset successful. You can now log in." });
+});
+
+// controllers/userController.js
+const checkVerified = asyncHandler(async (req, res) => {
+  try {
+    // 🔥 JUST isVerified status - minimal query
+    const user = await User.findById(req.user.id)
+      .select('isVerified');              // 👈 Super fast, no Mongoose doc
+
+    if (!user) {
+      return res.status(404).json({ isVerified: false });
+    }
+
+    res.json({ 
+      isVerified: user.isVerified 
+    });
+  } catch (error) {
+    res.status(500).json({ isVerified: false });
+  }
+});
+
 
 // Logout user
 const logoutCurrentUser = asyncHandler(async (req, res) => {
@@ -375,5 +510,10 @@ export {
   getUserById,
   updateUserById,
   createProfile,
-  getAllDoctors
+  getAllDoctors,
+  verifyEmail,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
+  checkVerified
 };

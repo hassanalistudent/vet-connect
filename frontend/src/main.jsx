@@ -34,6 +34,10 @@ import CreateAppointment from "./pages/Appointments/CreateAppointment.jsx";
 import AllDoctors from "./pages/User/AllDoctors.jsx";
 import VideoSession from "./pages/Appointments/VideoSession.jsx";
 import CompleteAppointment from "./pages/Appointments/CompleteAppointment.jsx";
+import AuthVerification from "./pages/Auth/AuthVarification.jsx";
+import ResendVerification from "./pages/Auth/ResendVarificationEmail.jsx";
+import { EmailVerifier } from "./components/EmailVerifier.jsx";
+import ResetPassword from "./pages/Auth/ResetPassword.jsx";
 
 
 const router = createBrowserRouter(
@@ -41,11 +45,14 @@ const router = createBrowserRouter(
     <Route path="/" element={<App />}>
       <Route path="/login" element={<Login/>}/>
       <Route path="/register" element={<Register/>}/>
+      <Route path="/verify-email" element={<AuthVerification />}/>
+      <Route path="/resend-email" element={<ResendVerification />}/>
+      <Route path="/reset-password/:token" element={<ResetPassword/>}/>
       <Route  path=":id" element={<UserDetails/>}/>
-      
-      
+
       <Route  path="" element={<PrivateRouter/>}>
-      <Route  path=":doctorId/newappointment" element={<CreateAppointment/>}/>
+      <Route path="" element={<EmailVerifier/>}>
+     <Route  path=":doctorId/newappointment" element={<CreateAppointment/>}/>
       <Route  path="pet/:id" element={<PetDetails/>}/>
       <Route  path=":appointmentId/video" element={<VideoSession/>}/>
       <Route  path="petowner" element={<PetOwnerRoute/>}>
@@ -67,6 +74,7 @@ const router = createBrowserRouter(
           <Route  path="userslist" element={<UserList/>}/>
           <Route  path="allpets" element={<AllPets/>}/>
           <Route  path="allappointments" element={<AdminAllAppointments/>}/>
+      </Route>
       </Route>
       </Route>
     </Route>

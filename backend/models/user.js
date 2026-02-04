@@ -12,6 +12,12 @@ const userSchema = new mongoose.Schema({
   // References to role-specific profiles
   doctorProfile: { type: mongoose.Schema.Types.ObjectId, ref: "DoctorProfile" },
   petOwnerProfile: { type: mongoose.Schema.Types.ObjectId, ref: "PetOwnerProfile" },
+
+  // ✅ Email verification fields
+  isVerified: { type: Boolean, default: false }, // whether user has verified email
+  verificationToken: { type: String },           // random token sent via email
+  verificationTokenExpiry: { type: Date },       // expiry time for token
+
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model("User", userSchema);

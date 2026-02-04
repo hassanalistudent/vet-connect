@@ -1,7 +1,6 @@
 import { apiSlice } from "./apiSlice";
 import { USERS_URL } from "../constants";
 
-
 export const userApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // 🔑 Login
@@ -90,14 +89,59 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
-    // get doctors
-     getDoctors: builder.query({
+
+    // 👨‍⚕️ Get doctors
+    getDoctors: builder.query({
       query: () => ({
         url: `${USERS_URL}/doctors`,
-        method: 'GET',
+        method: "GET",
       }),
-      providesTags: ['Doctor'],
+      providesTags: ["Doctor"],
       keepUnusedDataFor: 5,
+    }),
+
+    // 📧 Verify email
+    verifyEmail: builder.query({
+      query: ({ token, email }) => ({
+        url: `${USERS_URL}/verify-email?token=${token}&email=${email}`,
+        method: "GET",
+      }),
+    }),
+
+    // 🔄 Resend verification email
+    resendVerification: builder.mutation({
+      query: (email) => ({
+        url: `${USERS_URL}/resend-verification`,
+        method: "POST",
+        body: { email },
+      }),
+    }),
+
+    // 🔑 Forgot password
+    forgotPassword: builder.mutation({
+      query: (email) => ({
+        url: `${USERS_URL}/forgot-password`,
+        method: "POST",
+        body: { email },
+      }),
+    }),
+
+    // 🔑 Reset password
+    resetPassword: builder.mutation({
+      query: ({ token, password }) => ({
+        url: `${USERS_URL}/reset-password/${token}`,
+        method: "POST",
+        body: { password },
+      }),
+    }),
+    //check verified or not 
+    checkVerified: builder.query({
+      query: () => ({
+        url: `${USERS_URL}/verify`,
+        method: 'GET',
+        credentials: 'include', // Sends cookies if using httpOnly
+        // OR prepareHeaders for Bearer token
+      }),
     }),
   }),
 });
@@ -114,4 +158,9 @@ export const {
   useGetUserDetailsQuery,
   useUpdateUserMutation,
   useGetDoctorsQuery,
+  useVerifyEmailQuery,
+  useResendVerificationMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useCheckVerifiedQuery
 } = userApiSlice;
