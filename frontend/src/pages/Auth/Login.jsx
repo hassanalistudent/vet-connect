@@ -29,15 +29,28 @@ const Login = () => {
     }
   }, [navigate, redirect, userInfo]);
 
-  const submitHandler = async (e) => {
-    e.preventDefault()
-    try {
-      const res = await login({ email, password }).unwrap()
-      dispatch(setCredentials({ ...res }))
-    } catch (error) {
-      toast.error(error?.data?.message || error.message)
+ const submitHandler = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await login({ email, password }).unwrap();
+    dispatch(setCredentials({ ...res }));
+  } catch (error) {
+    const status = error?.status; // RTK Query exposes HTTP status
+    const message = error?.data?.message || error.message;
+
+    if (status === 403) {
+      // 🚫 Not verified
+      toast.error("Please verify your email first. Check your inbox!");
+      navigate("/resend-email"); // ✅ redirect to resend verification
+    } else if (status === 401) {
+      // 🚫 Invalid credentials
+      toast.error("Invalid email or password");
+    } else {
+      // 🚫 Generic error
+      toast.error(message);
     }
   }
+};
 
 // 👈 LINE 71 FIXED HERE 👇
 const forgotPasswordHandler = async (e) => {

@@ -50,8 +50,8 @@ const router = createBrowserRouter(
       <Route path="/reset-password/:token" element={<ResetPassword/>}/>
       <Route  path=":id" element={<UserDetails/>}/>
 
-      <Route  path="" element={<PrivateRouter/>}>
-      <Route path="" element={<EmailVerifier/>}>
+      <Route  path="" element={<PrivateRouter/>}>  
+      <Route path="" element={<EmailVerifier/>}>   
      <Route  path=":doctorId/newappointment" element={<CreateAppointment/>}/>
       <Route  path="pet/:id" element={<PetDetails/>}/>
       <Route  path=":appointmentId/video" element={<VideoSession/>}/>

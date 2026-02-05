@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { setCredentials } from "../../redux/features/auth/authSlice.js";
 import { toast } from "react-toastify";
 import Loader from "../../components/Loader.jsx";
 import { useRegisterMutation } from "../../redux/api/userApiSlice.js";
@@ -14,7 +13,6 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [register, { isLoading }] = useRegisterMutation();
   const { userInfo } = useSelector((state) => state.auth);
@@ -37,7 +35,6 @@ const Register = () => {
       try {
         // ✅ Include phone in payload
         const res = await register({ fullName, email, phone, password, role }).unwrap();
-        dispatch(setCredentials({ ...res }));
         navigate(redirect);
         toast.success("User successfully registered");
       } catch (error) {
