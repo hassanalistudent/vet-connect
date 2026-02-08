@@ -1,145 +1,186 @@
-// src/pages/admin/AllDoctorAppointments.jsx
 import { Link } from "react-router-dom";
 import moment from "moment";
-import {
-  useGetOwnerAppointmentsQuery,
-} from "../../redux/api/appointmentApiSlice";
+import { useGetOwnerAppointmentsQuery } from "../../redux/api/appointmentApiSlice";
 import AdminMenu from "../../components/AdminMenu";
 import Loader from "../../components/Loader";
 
 const PetOwnerAppointments = () => {
-  // Optional: pass status filter if you want, e.g. { status: "Scheduled" }
-  const {
-    data,
-    isLoading,
-    isError,
-  } = useGetOwnerAppointmentsQuery();
-
-  // If your endpoint returns { success, count, appointments }
+  const { data, isLoading, isError } = useGetOwnerAppointmentsQuery();
   const appointments = data?.appointments || [];
 
-  if (isLoading) {
-    return <Loader />;
-  }
+  if (isLoading) return <Loader />;
 
   if (isError) {
-    return <div>Error loading appointments</div>;
-  }
-
-  return (
-    <div className="container mx-[9rem]">
-      <div className="flex flex-col md:flex-row">
-        {/* Left: content */}
-        <div className="p-3 md:w-3/4">
-          <div className="ml-[2rem] text-xl font-bold h-12">
-            My Appointments ({appointments.length})
-          </div>
-
-          {/* Grid layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {appointments.map((appt) => (
-              <div
-                key={appt._id}
-                className="flex border rounded-lg p-4 shadow-sm"
-              >
-                {/* Left side: pet image (if exists) */}
-                <img
-                  src={
-                    appt.petId?.petImages
-                      ? appt.petId.petImages
-                      : "/images/default-pet.png"
-                  }
-                  alt={appt.petId?.petType || "Pet"}
-                  className="w-32 h-32 object-cover rounded-md mr-4"
-                />
-
-                {/* Right: details */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div className="flex justify-between items-center">
-                    <h5 className="text-lg font-semibold">
-                      {appt.petId?.petType || "Pet"}{" "}
-                      {appt.petId?.breed ? `- ${appt.petId.breed}` : ""}
-                    </h5>
-                    <p className="text-gray-400 text-sm">
-                      {appt.appointmentDate
-                        ? moment(appt.appointmentDate).format("MMMM Do YYYY")
-                        : ""}
-                    </p>
-                  </div>
-
-                  <p className="text-sm text-gray-700 mt-1">
-                    Time:{" "}
-                    <span className="font-semibold">
-                      {appt.appointmentTime || "N/A"}
-                    </span>{" "}
-                    | Status:{" "}
-                    <span
-                      className={`font-semibold ${
-                        appt.status === "Cancelled"
-                          ? "text-red-600"
-                          : appt.status === "Completed"
-                          ? "text-green-600"
-                          : "text-blue-600"
-                      }`}
-                    >
-                      {appt.status}
-                    </span>{" "}
-                    | Type:{" "}
-                    <span className="font-semibold">
-                      {appt.appointmentType || "N/A"}
-                    </span>
-                  </p>
-
-                  <p className="text-sm text-gray-700 mt-1 mb-1">
-                    Charges:{" "}
-                    <span className="font-semibold">
-                      {appt.charges ? `${appt.charges} PKR` : "N/A"}
-                    </span>{" "}
-                    | Paid:{" "}
-                    <span className="font-semibold">
-                      {appt.isPaid ? "Yes" : "No"}
-                    </span>
-                  </p>
-
-
-                  <div className="flex gap-2 flex-wrap">
-                    {/* View appointment details page (if you create it) */}
-                    <Link
-                      to={`/petowner/${appt._id}/owner-response`}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-pink-700 rounded-lg hover:bg-pink-800 focus:ring-4 focus:outline-none focus:ring-pink-300"
-                    >
-                      View Details
-                      <svg
-                        className="w-3.5 h-3.5 ml-2"
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 14 10"
-                      >
-                        <path
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M1 5h12m0 0l-4-4m4 4l-4 4"
-                        />
-                      </svg>
-                    </Link>
-
-                    {/* Example buttons for future actions */}
-                    {/* <button className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                      Update Status
-                    </button> */}
-                  </div>
-                </div>
-              </div>
-            ))}
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-red-800">Error</h3>
+            <p className="text-red-600 mt-2">Failed to load appointments</p>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Admin / Doctor side menu */}
-        <div className="md:w-1/4 p-3 mt-2">
-          <AdminMenu />
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Completed": return "bg-green-100 text-green-800";
+      case "Cancelled": return "bg-red-100 text-red-800";
+      case "Accepted": return "bg-blue-100 text-blue-800";
+      case "Rescheduled": return "bg-yellow-100 text-yellow-800";
+      case "Scheduled": return "bg-purple-100 text-purple-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content */}
+          <div className="lg:w-3/4">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900">My Appointments</h1>
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-gray-600">
+                  Total: <span className="font-semibold">{appointments.length} appointments</span>
+                </p>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">Filter by status:</span>
+                  <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-navigray focus:border-navigray">
+                    <option value="all">All Statuses</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Accepted">Accepted</option>
+                    <option value="Rescheduled">Rescheduled</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Appointment Cards */}
+            {appointments.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No appointments found</h3>
+                <p className="text-gray-600">You don't have any appointments scheduled yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {appointments.map((appt) => (
+                  <div key={appt._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                    {/* Header with Status */}
+                    <div className={`px-6 py-4 border-b ${getStatusColor(appt.status).split(' ')[0]}`}>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusColor(appt.status)}`}>
+                          {appt.status}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {moment(appt.appointmentDate).format("MMM D, YYYY")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6">
+                      <div className="flex items-start space-x-4">
+                        {/* Pet Image */}
+                        <div className="flex-shrink-0">
+                          <img
+                            src={appt.petId?.petImages || "/images/default-pet.png"}
+                            alt={appt.petId?.petName || "Pet"}
+                            className="w-20 h-20 rounded-xl object-cover border border-gray-200"
+                          />
+                        </div>
+
+                        {/* Pet Info */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-gray-900 truncate">
+                            {appt.petId?.petName || "Unnamed Pet"}
+                          </h3>
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                              </svg>
+                              <span>{appt.petId?.petType || "Unknown"} • {appt.petId?.breed || "Mixed"}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>{appt.appointmentTime}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                              <span>{appt.charges} PKR • {appt.isPaid ? "Paid ✓" : "Pending"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer with Action Button */}
+                      <div className="mt-6 pt-4 border-t border-gray-100">
+                        <Link
+                          to={`/petowner/${appt._id}/owner-response`}
+                          className="w-full bg-navigray hover:bg-navigray-dark text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
+                        >
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:w-1/4">
+            <AdminMenu />
+            
+            {/* Stats Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-8">
+              <h3 className="font-semibold text-gray-900 mb-4">Appointment Stats</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Total</span>
+                  <span className="font-semibold">{appointments.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-green-600">Completed</span>
+                  <span className="font-semibold">
+                    {appointments.filter(a => a.status === "Completed").length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-600">Upcoming</span>
+                  <span className="font-semibold">
+                    {appointments.filter(a => ["Scheduled", "Accepted"].includes(a.status)).length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-yellow-600">Rescheduled</span>
+                  <span className="font-semibold">
+                    {appointments.filter(a => a.status === "Rescheduled").length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

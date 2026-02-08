@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Loader from "../../components/Loader";
 import Message from "../../components/Message";
@@ -16,13 +16,13 @@ const PetDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: pet, isLoading, error, refetch } = useGetPetDetailsQuery(id);
-  const [updatePet] = useUpdatePetMutation();
+  const [updatePet, { isLoading: updating }] = useUpdatePetMutation();
   const [uploadImage] = useUploadImageMutation();
-  const [deletePet] = useDeletePetMutation();
+  const [deletePet, { isLoading: deleting }] = useDeletePetMutation();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    petName: "", // ✅ NEW: Pet Name field
+    petName: "",
     petType: "",
     breed: "",
     age: "",
@@ -36,14 +36,11 @@ const PetDetails = () => {
   const currentUserId = useSelector(state => state.auth.userInfo?._id);
   const isOwner = pet?.ownerId?._id === currentUserId;
 
-  // Load form data when entering edit mode
-  const handleEditToggle = () => {
-    if (isEditing) {
-      setIsEditing(false);
-      setUploadedImage("");
-    } else {
+  // Load pet data when component mounts
+  useEffect(() => {
+    if (pet) {
       setFormData({
-        petName: pet?.petName || "", // ✅ NEW
+        petName: pet?.petName || "",
         petType: pet?.petType || "",
         breed: pet?.breed || "",
         age: pet?.age?.toString() || "",
@@ -52,18 +49,51 @@ const PetDetails = () => {
         petImages: pet?.petImages || "",
       });
       setUploadedImage(pet?.petImages || "");
+    }
+  }, [pet]);
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      setIsEditing(false);
+    } else {
       setIsEditing(true);
     }
   };
 
-  // Upload image handler (single image)
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (pet) {
+      setFormData({
+        petName: pet?.petName || "",
+        petType: pet?.petType || "",
+        breed: pet?.breed || "",
+        age: pet?.age?.toString() || "",
+        gender: pet?.gender || "",
+        weight: pet?.weight?.toString() || "",
+        petImages: pet?.petImages || "",
+      });
+      setUploadedImage(pet?.petImages || "");
+    }
+  };
+
+  // Upload image handler
   const uploadPetImageHandler = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Preview image immediately
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadedImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to server
     const formDataUpload = new FormData();
-    formDataUpload.append("image", e.target.files[0]);
+    formDataUpload.append("image", file);
     try {
       const res = await uploadImage(formDataUpload).unwrap();
-      toast.success(res.message);
-
+      toast.success("Pet image uploaded successfully");
       const newImage = res.image;
       setUploadedImage(newImage);
       setFormData(prev => ({
@@ -72,6 +102,8 @@ const PetDetails = () => {
       }));
     } catch (error) {
       toast.error(error?.data?.message || error.error);
+      // Revert to original image if upload fails
+      setUploadedImage(pet?.petImages || "");
     }
   };
 
@@ -81,12 +113,11 @@ const PetDetails = () => {
     try {
       await updatePet({
         petId: id,
-        ...formData, // ✅ Includes petName
+        ...formData,
       }).unwrap();
       toast.success("Pet updated successfully");
       refetch();
       setIsEditing(false);
-      setUploadedImage("");
     } catch (err) {
       toast.error(err?.data?.message || err.error);
     }
@@ -101,7 +132,7 @@ const PetDetails = () => {
     try {
       await deletePet(id).unwrap();
       toast.success("Pet deleted successfully");
-      navigate('/petowner/mypets'); // ✅ Better navigation
+      navigate('/petowner/mypets');
     } catch (err) {
       toast.error(err?.data?.message || err.error || "Failed to delete pet");
     }
@@ -118,216 +149,399 @@ const PetDetails = () => {
     );
 
   return (
-    <div className="flex flex-col md:flex-row p-4 relative">
-      {/* Toggle + Delete Buttons - Lower Right Corner (Owner Only) */}
-      {isOwner && (
-        <div className="fixed bottom-6 right-6 md:right-24 flex flex-col gap-3 z-50">
-          {/* Edit Button */}
-          <button
-            onClick={handleEditToggle}
-            className="bg-pink-600 hover:bg-pink-700 text-white p-4 rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-xl font-bold focus:outline-none focus:ring-4 focus:ring-pink-300 transition-all"
-            title={isEditing ? "View Details" : "Edit Pet"}
-          >
-            {isEditing ? "👁️" : "✏️"}
-          </button>
-          
-          {/* Delete Button */}
-          {!isEditing && (
-            <button
-              onClick={deleteHandler}
-              className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-xl font-bold focus:outline-none focus:ring-4 focus:ring-red-300 transition-all"
-              title="Delete Pet"
-            >
-              🗑️
-            </button>
-          )}
-        </div>
-      )}
-
-      <main className="flex-1 md:ml-6">
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <h2 className="text-2xl font-bold text-pink-600 mb-4">
-            {isEditing ? "Edit Pet" : "Pet Details"}
-          </h2>
-
-          {/* Top: Image + main info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Image Upload/View */}
-            <div className="flex items-center justify-left">
-              <div className="w-full max-w-sm aspect-square bg-gray-50 rounded-lg flex items-center justify-center relative">
-                {isEditing ? (
-                  <>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={uploadPetImageHandler}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    {uploadedImage ? (
-                      <img
-                        src={uploadedImage}
-                        alt="Pet image"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="text-center text-gray-500">
-                        <div className="text-4xl mb-2">📁</div>
-                        <p className="text-sm">Click to upload image</p>
-                      </div>
-                    )}
-                  </>
-                ) : pet?.petImages ? (
-                  <img
-                    src={pet.petImages}
-                    alt={pet.petName || pet.petType}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 rounded-lg border-2 border-dashed border-pink-300 flex items-center justify-center text-gray-500 font-semibold">
-                    No Image
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Main pet info - View Mode or Edit Mode */}
-            {!isEditing ? (
-              <div className="flex items-stretch">
-                <div className="w-full rounded-lg p-4 space-y-3 text-gray-700">
-                  <h3 className="text-lg font-semibold text-pink-600">Pet Info</h3>
-                  {/* ✅ NEW: Pet Name Display */}
-                  <p><strong>Name:</strong> {pet.petName || "—"}</p>
-                  <p><strong>Type:</strong> {pet.petType}</p>
-                  <p><strong>Breed:</strong> {pet.breed || "—"}</p>
-                  <p><strong>Age:</strong> {pet.age ?? "—"}</p>
-                  <p><strong>Gender:</strong> {pet.gender || "—"}</p>
-                  <p><strong>Weight:</strong> {pet.weight ? `${pet.weight} kg` : "—"}</p>
-                </div>
-              </div>
-            ) : (
-              /* Edit Mode Form */
-              <form onSubmit={updateHandler} className="space-y-4 p-4">
-                {/* ✅ NEW: Pet Name Field - TOP */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pet Name *</label>
-                  <input
-                    type="text"
-                    value={formData.petName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, petName: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                    placeholder="e.g., Max, Luna"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pet Type *</label>
-                  <select
-                    value={formData.petType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, petType: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                    required
-                  >
-                    <option value="">Select Pet Type</option>
-                    <option value="Dog">Dog</option>
-                    <option value="Cat">Cat</option>
-                    <option value="Bird">Bird</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Breed</label>
-                  <input
-                    type="text"
-                    value={formData.breed}
-                    onChange={(e) => setFormData(prev => ({ ...prev, breed: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                    placeholder="e.g., Labrador"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
-                    <input
-                      type="number"
-                      value={formData.age}
-                      onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                      min="0"
-                      max="50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg) *</label>
-                    <input
-                      type="number"
-                      value={formData.weight}
-                      onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                      min="0.1"
-                      step="0.1"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-                  <select
-                    value={formData.gender}
-                    onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                    required
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-6 rounded-lg focus:ring-4 focus:ring-pink-300 transition-colors mt-2"
-                >
-                  Update Pet
-                </button>
-              </form>
-            )}
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Pet Profile</h1>
+            <p className="mt-2 text-gray-600">
+              {isEditing ? "Edit your pet's information" : "View your pet's details"}
+            </p>
           </div>
-
-          {/* Bottom: Owner + Timeline */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
-            {/* Owner details */}
-            <div>
-              <h3 className="text-lg font-semibold text-pink-600 mb-2">Owner Details</h3>
-              {owner ? (
+          
+          {/* Action Buttons */}
+          {isOwner && (
+            <div className="flex space-x-4 mt-4 md:mt-0">
+              {!isEditing ? (
                 <>
-                  <p><strong>Name:</strong> {owner.fullName}</p>
-                  <p><strong>Email:</strong> {owner.email}</p>
-                  <p><strong>Phone:</strong> {owner.phone || "—"}</p>
-                  <Link
-                    to={`/users/${owner._id}`} // ✅ Fixed path
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-pink-700 rounded-lg hover:bg-pink-800 mt-2"
+                  <button
+                    onClick={handleEditToggle}
+                    className="bg-navigray text-white px-6 py-3 rounded-lg font-medium hover:bg-navigray-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navigray flex items-center"
                   >
-                    View Owner Profile
-                  </Link>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Pet
+                  </button>
+                  <button
+                    onClick={deleteHandler}
+                    className="bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center"
+                    disabled={deleting}
+                  >
+                    {deleting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Pet
+                      </>
+                    )}
+                  </button>
                 </>
               ) : (
-                <p className="text-gray-500">No owner information found.</p>
+                <button
+                  onClick={handleCancel}
+                  className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
               )}
             </div>
+          )}
+        </div>
 
-            {/* Timeline */}
-            <div>
-              <h3 className="text-lg font-semibold text-pink-600 mb-2">Timeline</h3>
-              <p><strong>Created:</strong> {moment(pet?.createdAt).format("MMM DD, YYYY, h:mm A")}</p>
-              <p><strong>Updated:</strong> {moment(pet?.updatedAt).format("MMM DD, YYYY, h:mm A")}</p>
-            </div>
+        {/* Main Content */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="p-8">
+            {isEditing ? (
+              /* Edit Mode */
+              <form onSubmit={updateHandler}>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column - Image Upload */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                      Pet Photo
+                    </h3>
+                    <div 
+                      onClick={() => document.getElementById('petImageInput').click()}
+                      className="relative w-full aspect-square max-w-md mx-auto border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:border-navigray transition-colors group bg-gray-50 overflow-hidden"
+                    >
+                      {uploadedImage ? (
+                        <>
+                          <img
+                            src={uploadedImage}
+                            alt="Pet preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white font-medium">Change Photo</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6">
+                          <svg className="w-20 h-20 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="text-gray-500 text-center mb-2">Click to upload photo</p>
+                          <p className="text-sm text-gray-400 text-center">
+                            JPG, PNG up to 5MB
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        id="petImageInput"
+                        type="file"
+                        accept="image/*"
+                        onChange={uploadPetImageHandler}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column - Form */}
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 pb-2 border-b border-gray-200">
+                      Pet Details
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {/* Pet Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Pet Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.petName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, petName: e.target.value }))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                          placeholder="Enter pet's name"
+                          required
+                        />
+                      </div>
+
+                      {/* Pet Type */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Pet Type *
+                        </label>
+                        <select
+                          value={formData.petType}
+                          onChange={(e) => setFormData(prev => ({ ...prev, petType: e.target.value }))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                          required
+                        >
+                          <option value="">Select Pet Type</option>
+                          <option value="Dog">Dog</option>
+                          <option value="Cat">Cat</option>
+                          <option value="Bird">Bird</option>
+                          <option value="Rabbit">Rabbit</option>
+                          <option value="Hamster">Hamster</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      {/* Breed */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Breed
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.breed}
+                          onChange={(e) => setFormData(prev => ({ ...prev, breed: e.target.value }))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                          placeholder="Enter breed (optional)"
+                        />
+                      </div>
+
+                      {/* Age & Weight */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Age (years) *
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.age}
+                            onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                            min="0"
+                            max="50"
+                            step="0.5"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Weight (kg) *
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.weight}
+                            onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                            min="0.1"
+                            step="0.1"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Gender */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Gender *
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, gender: "Male" }))}
+                            className={`py-3 px-4 rounded-lg border-2 font-medium transition-all ${
+                              formData.gender === "Male" 
+                              ? "border-navigray bg-navigray text-white" 
+                              : "border-gray-300 text-gray-700 hover:border-navigray hover:text-navigray"
+                            }`}
+                          >
+                            Male
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, gender: "Female" }))}
+                            className={`py-3 px-4 rounded-lg border-2 font-medium transition-all ${
+                              formData.gender === "Female" 
+                              ? "border-navigray bg-navigray text-white" 
+                              : "border-gray-300 text-gray-700 hover:border-navigray hover:text-navigray"
+                            }`}
+                          >
+                            Female
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Form Actions */}
+                    <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={updating}
+                        className="px-6 py-3 bg-navigray text-white rounded-lg font-medium hover:bg-navigray-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navigray disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
+                      >
+                        {updating ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Update Pet
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            ) : (
+              /* View Mode */
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column - Pet Image & Basic Info */}
+                <div>
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <div className="flex flex-col items-center">
+                      {/* Pet Image */}
+                      <div className="w-48 h-48 rounded-full border-4 border-white shadow-lg overflow-hidden mb-6">
+                        {pet?.petImages ? (
+                          <img
+                            src={pet.petImages}
+                            alt={pet.petName || pet.petType}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Pet Name & Type */}
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        {pet.petName || "Unnamed Pet"}
+                      </h2>
+                      <div className="inline-flex items-center px-4 py-2 bg-navigray/10 text-navigray rounded-full text-sm font-medium mb-6">
+                        {pet.petType}
+                      </div>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                      <div className="bg-white rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-gray-900">{pet.age || "—"}</div>
+                        <div className="text-sm text-gray-600">Years Old</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-gray-900">{pet.weight || "—"}</div>
+                        <div className="text-sm text-gray-600">kg</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Detailed Info */}
+                <div className="space-y-6">
+                  {/* Detailed Information */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Pet Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Pet Name</span>
+                        <span className="font-medium">{pet.petName || "Not named"}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Type</span>
+                        <span className="font-medium">{pet.petType || "—"}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Breed</span>
+                        <span className="font-medium">{pet.breed || "Not specified"}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Gender</span>
+                        <span className="font-medium">{pet.gender || "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Owner Details */}
+                  {owner && (
+                    <div className="bg-gray-50 rounded-xl p-6">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                        <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Owner Information
+                      </h3>
+                      <div className="space-y-3">
+                        <p><strong>Name:</strong> {owner.fullName}</p>
+                        <p><strong>Email:</strong> {owner.email}</p>
+                        {owner.phone && <p><strong>Phone:</strong> {owner.phone}</p>}
+                        <Link
+                          to={`/users/${owner._id}`}
+                          className="inline-flex items-center text-navigray hover:text-navigray-dark font-medium"
+                        >
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                          View Owner Profile
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timeline */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Timeline
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Created</span>
+                        <span className="font-medium">{moment(pet?.createdAt).format("MMM DD, YYYY")}</span>
+                      </div>
+                      <div className="flex justify-between py-2">
+                        <span className="text-gray-600">Last Updated</span>
+                        <span className="font-medium">{moment(pet?.updatedAt).format("MMM DD, YYYY")}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

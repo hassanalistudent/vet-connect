@@ -1,20 +1,19 @@
-// src/pages/DoctorActions.jsx - ✅ VIDEO CALL + ACCEPTED/PAID LOGIC
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
-const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) => {
+const DoctorActions = ({ appointment, appointmentId, doctorResponse, completeAppointment, refetch }) => {
   const [doctorForm, setDoctorForm] = useState({
     status: "Scheduled",
     appointmentDate: "",
     appointmentTime: "",
   });
 
-  // ✅ Updated logic: Video call + Accepted + Paid only
-  const isVideoCall = appointment?.appointmentType?.toLowerCase().includes("video");
+  const isVideoCall = appointment?.appointmentType === "Video Call";
   const canDoctorQuickAct = appointment?.status === "Scheduled";
   const canDoctorComplete = appointment?.status === "Accepted" && appointment?.isPaid;
   const isCompleted = appointment?.status === "Completed";
+  const showVideoCallButton = isVideoCall && appointment?.isPaid && appointment?.status === "Accepted";
 
   useEffect(() => {
     if (appointment) {
@@ -54,178 +53,262 @@ const DoctorActions = ({ appointment, appointmentId, doctorResponse, refetch }) 
   };
 
   const renderActionButtons = () => {
-    // ✅ COMPLETED STATE
     if (isCompleted) {
       return (
-        <div className="col-span-full p-12 bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl border-2 border-gray-200 text-center flex flex-col items-center justify-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h3 className="text-2xl font-bold text-green-700 mb-2">Appointment Completed</h3>
-          <p className="text-gray-600 text-lg">Medical record has been created</p>
+        <div className="w-full bg-gray-50 rounded-xl p-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">Appointment Completed</h3>
+          <p className="text-gray-600 text-center">Medical record has been created</p>
         </div>
       );
     }
 
-    // ✅ VIDEO CALL → REDIRECT TO VIDEO
-    if (isVideoCall && canDoctorComplete) {
+    // Video Call Section (when applicable)
+    if (showVideoCallButton) {
       return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-          {/* Left: Video Call Info */}
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-12 rounded-3xl shadow-2xl border-2 border-purple-200 flex flex-col items-center justify-center text-center">
-            <div className="text-5xl mb-6">📹</div>
-            <h3 className="text-3xl font-bold text-purple-700 mb-4">Video Consultation</h3>
-            <p className="text-xl text-purple-600 mb-6">{appointment.petId.petName || 'Pet'}</p>
-            <div className="text-2xl font-bold text-gray-700">
-              {appointment?.appointmentDate} at {appointment?.appointmentTime}
+        <div className="w-full space-y-6">
+          {/* Video Call Card */}
+          <div className="w-full bg-purple-50 rounded-xl p-6 border border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-purple-700 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Video Consultation
+              </h4>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                READY
+              </span>
             </div>
-          </div>
-
-          {/* Right: Video Call Button */}
-          <div className="bg-white p-8 rounded-2xl shadow-xl border-2 border-purple-300 flex flex-col justify-center">
-            <h4 className="text-2xl font-bold text-purple-700 mb-8 flex items-center gap-4 text-center">
-              🎥 Start Video Call
-            </h4>
+            <p className="text-purple-600 mb-4">
+              {appointment.petId?.petName || 'Pet'} - {appointment.appointmentDate} at {appointment.appointmentTime}
+            </p>
             <Link
               to={`/${appointmentId}/video`}
-              className="w-full block bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xl font-bold py-8 px-12 rounded-3xl shadow-2xl hover:shadow-3xl transition-all flex items-center gap-4 justify-center text-decoration-none mx-auto max-w-md"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
             >
-              📱 Join Video Consultation
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Start Video Call
             </Link>
-            <p className="text-sm text-purple-700 mt-6 text-center">
-              Click to start video call with pet owner
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // ✅ ACCEPTED + PAID → COMPLETE APPOINTMENT
-    if (canDoctorComplete) {
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-          {/* Left: Status Info */}
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-12 rounded-3xl shadow-2xl border-2 border-emerald-200 flex flex-col items-center justify-center text-center">
-            <div className="text-5xl mb-6">✅</div>
-            <h3 className="text-3xl font-bold text-emerald-700 mb-4">Ready to Complete</h3>
-            <p className="text-xl text-emerald-600 mb-6">
-              ✓ Accepted <br />
-              ✓ Paid ✅
-            </p>
-            <div className="text-2xl font-bold text-gray-700">
-              {appointment?.appointmentDate} at {appointment?.appointmentTime}
-            </div>
           </div>
 
-          {/* Right: Complete Button */}
-          <div className="bg-white p-8 rounded-2xl shadow-xl border-2 border-emerald-300 flex flex-col justify-center">
-            <h4 className="text-2xl font-bold text-emerald-700 mb-8 flex items-center gap-4 text-center">
-              🏥 Complete Consultation
+          {/* Complete Appointment Card */}
+          <div className="w-full bg-green-50 rounded-xl p-6 border border-green-200">
+            <h4 className="text-lg font-semibold text-green-700 mb-4 flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Complete Appointment
             </h4>
             <Link
-              to={`/doctor/appointments/${appointmentId}/complete`}
-              className="w-full block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xl font-bold py-8 px-12 rounded-3xl shadow-2xl hover:shadow-3xl transition-all flex items-center gap-4 justify-center text-decoration-none mx-auto max-w-md"
+              to={`/doctor/${appointmentId}/complete`}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
             >
-              ✅ Complete & Create Medical Record
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Complete Appointment & Add Records
             </Link>
-            <p className="text-sm text-emerald-700 mt-6 text-center">
-              Mark consultation as done
+            <p className="text-sm text-green-600 mt-3 text-center">
+              Create medical record after consultation
             </p>
           </div>
         </div>
       );
     }
 
-    // ✅ NOT ACTIONABLE
-    if (!canDoctorQuickAct && !canDoctorComplete ) {
+    // Ready to Complete Section
+    if (canDoctorComplete) {
       return (
-        <div className="col-span-full p-12 bg-gradient-to-br from-yellow-50 to-orange-100 rounded-3xl border-2 border-yellow-200 text-center flex flex-col items-center justify-center">
-          <div className="text-6xl mb-4">⏳</div>
-          <h3 className="text-2xl font-bold text-yellow-700 mb-2">
-            Status: {appointment?.status} {appointment?.isPaid ? '(Paid)' : '(Pending Payment)'}
-          </h3>
-          <p className="text-gray-600 text-lg">Waiting for action</p>
+        <div className="w-full space-y-6">
+          {/* Payment Status */}
+          <div className="w-full bg-green-50 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-green-700 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Payment Status
+              </h4>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                PAID
+              </span>
+            </div>
+            <p className="text-green-600 text-center">Payment has been confirmed</p>
+          </div>
+
+          {/* Complete Action */}
+          <div className="w-full bg-green-50 rounded-xl p-6 border border-green-200">
+            <h4 className="text-lg font-semibold text-green-700 mb-4 flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Complete Appointment
+            </h4>
+            <Link
+              to={`/doctor/${appointmentId}/complete`}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Complete Appointment & Add Records
+            </Link>
+            <p className="text-sm text-green-600 mt-3 text-center">
+              Create medical record after consultation
+            </p>
+          </div>
         </div>
       );
     }
 
-    // ✅ SCHEDULED → QUICK ACTIONS (REMOVED Complete button)
+    // Waiting Status (when not scheduled)
+    if (!canDoctorQuickAct) {
+      return (
+        <div className="w-full space-y-6">
+          {/* Payment Status */}
+          <div className="w-full bg-yellow-50 rounded-xl p-6 border border-yellow-200">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-yellow-700 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Payment Status
+              </h4>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                appointment?.isPaid ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {appointment?.isPaid ? "PAID" : "PENDING"}
+              </span>
+            </div>
+            <p className="text-yellow-600 text-center">
+              {appointment?.isPaid ? 'Payment received' : 'Waiting for payment'}
+            </p>
+          </div>
+
+          {/* Status Card */}
+          <div className="w-full bg-blue-50 rounded-xl p-6 border border-blue-200">
+            <h4 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Current Status
+            </h4>
+            <div className="text-center">
+              <span className="text-xl font-bold text-blue-800">{appointment?.status}</span>
+              <p className="text-sm text-blue-600 mt-2">
+                {appointment?.status === "Rescheduled" 
+                  ? "Waiting for owner to accept new time" 
+                  : "Waiting for owner action"}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Quick Action Form (for Scheduled appointments) - Full width dropdown form
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
-        {/* Quick Actions Form ONLY */}
-        <form onSubmit={handleDoctorResponse} className="bg-white p-8 rounded-2xl shadow-xl border border-pink-200">
-          <h4 className="text-xl font-bold text-pink-600 mb-6 flex items-center gap-3">
-            🩺 Quick Actions
+      <div className="w-full space-y-6">
+        {/* Status Information */}
+        <div className="w-full bg-blue-50 rounded-xl p-6 border border-blue-200">
+          <h4 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Quick Actions
           </h4>
-          
-          <div className="mb-6">
-            <label className="block text-lg font-semibold text-gray-700 mb-4">
-              Action <span className="text-pink-500">*</span>
+          <p className="text-blue-600 mb-4">
+            Update appointment status and time (if rescheduling)
+          </p>
+        </div>
+
+        {/* Quick Action Form */}
+        <form onSubmit={handleDoctorResponse} className="w-full bg-white rounded-xl p-6 border border-gray-200 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Appointment Action
             </label>
             <select
               value={doctorForm.status}
               onChange={(e) => setDoctorForm(prev => ({ ...prev, status: e.target.value }))}
-              className="w-full p-4 text-lg border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-pink-400 focus:border-pink-500 transition-all bg-gradient-to-r from-pink-50 to-indigo-50"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
             >
-              <option value="Scheduled">Keep Scheduled 🔄</option>
-              <option value="Rescheduled">Reschedule 📅</option>
-              <option value="Accepted">Accept & Confirm ✅</option>
-              <option value="Cancelled">Cancel ❌</option>
+              <option value="Scheduled">Keep as Scheduled</option>
+              <option value="Rescheduled">Reschedule</option>
+              <option value="Accepted">Accept</option>
+              <option value="Cancelled">Cancel</option>
             </select>
           </div>
 
+          {/* Reschedule Fields (Conditional) */}
           {doctorForm.status === "Rescheduled" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-4 bg-blue-50 rounded-xl">
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-3">New Date</label>
-                <input
-                  type="date"
-                  value={doctorForm.appointmentDate}
-                  onChange={(e) => setDoctorForm(prev => ({ ...prev, appointmentDate: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-3">New Time</label>
-                <input
-                  type="time"
-                  value={doctorForm.appointmentTime}
-                  onChange={(e) => setDoctorForm(prev => ({ ...prev, appointmentTime: e.target.value }))}
-                  className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500"
-                />
+            <div className="w-full space-y-4 p-4 bg-blue-50 rounded-lg">
+              <h5 className="font-medium text-blue-700">New Appointment Details</h5>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">New Date</label>
+                  <input
+                    type="date"
+                    value={doctorForm.appointmentDate}
+                    onChange={(e) => setDoctorForm(prev => ({ ...prev, appointmentDate: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">New Time</label>
+                  <input
+                    type="time"
+                    value={doctorForm.appointmentTime}
+                    onChange={(e) => setDoctorForm(prev => ({ ...prev, appointmentTime: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                    required
+                  />
+                </div>
               </div>
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white text-lg font-bold py-4 px-8 rounded-2xl shadow-2xl hover:shadow-3xl transition-all"
+            className="w-full bg-navigray hover:bg-navigray-dark text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
           >
-            {doctorForm.status === "Accepted" ? "Accept Appointment" : 
-             doctorForm.status === "Cancelled" ? "Cancel Appointment" : 
-             "Update Status"}
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Update Appointment Status
           </button>
         </form>
+
+        {/* Note */}
+        <div className="w-full bg-yellow-50 rounded-xl p-4 border border-yellow-200">
+          <p className="text-sm text-yellow-700 text-center">
+            Note: Quick actions are only available for "Scheduled" appointments
+          </p>
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="mb-12 p-8 bg-gradient-to-br from-indigo-50 via-white to-pink-50 border-4 border-dashed border-pink-300 rounded-3xl shadow-2xl">
-      <h3 className="text-3xl font-bold text-pink-700 mb-8 flex items-center gap-4">
-        🩺 Doctor Control Panel
-        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-          appointment?.status === "Scheduled" ? "bg-yellow-100 text-yellow-800" :
-          appointment?.status === "Accepted" ? "bg-emerald-100 text-emerald-800" :
-          appointment?.status === "Completed" ? "bg-green-100 text-green-800" :
-          "bg-gray-100 text-gray-800"
-        }`}>
-          {appointment?.status || "Scheduled"} {appointment?.isPaid && "💰"}
-        </span>
+    <div className="w-full">
+      <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+        <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        Actions
       </h3>
-      
-      <div className="grid">
-        {renderActionButtons()}
-      </div>
+      {renderActionButtons()}
     </div>
   );
 };

@@ -29,7 +29,7 @@ import DoctorAppointments from "./pages/Appointments/DoctorAppointments.jsx";
 import DoctorResponse from "./pages/Appointments/DoctorResponse.jsx";
 import PetOwnerResponse from "./pages/Appointments/PetOwnerResponse.jsx";
 import PetOwnerAppointments from "./pages/Appointments/PetOwnerAppointments.jsx";
-import AdminAllAppointments from "./pages/Appointments/AdminAllAppointments.jsx";
+import AdminAllAppointments from "./pages/Admin/AdminAllAppointments.jsx";
 import CreateAppointment from "./pages/Appointments/CreateAppointment.jsx";
 import AllDoctors from "./pages/User/AllDoctors.jsx";
 import VideoSession from "./pages/Appointments/VideoSession.jsx";
