@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import moment from "moment";
 import { useGetPetsQuery } from "../../redux/api/petApiSlice";
-import AdminMenu from "../../components/AdminMenu";
+
 import Loader from "../../components/Loader";
 import { 
   FaDog, 
@@ -298,7 +298,6 @@ const AllPets = () => {
 
           {/* Sidebar */}
           <div className="lg:w-1/4">
-            <AdminMenu />
             
             {/* Quick Stats Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-8">

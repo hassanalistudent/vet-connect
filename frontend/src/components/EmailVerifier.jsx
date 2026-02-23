@@ -8,7 +8,6 @@ export const EmailVerifier = () => {
     isLoading, 
     error 
   } = useCheckVerifiedQuery();
-console.log(data)
   //  Loading
   if (isLoading) {
     return (

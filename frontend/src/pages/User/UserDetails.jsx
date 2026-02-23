@@ -2,14 +2,13 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Loader from "../../components/Loader";
 import Message from "../../components/Message";
-import AdminMenu from "../../components/AdminMenu";
 import {
   useGetUserDetailsQuery,
   useUpdateUserMutation,
 } from "../../redux/api/userApiSlice";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import moment from "moment"; // Add moment for date formatting
+import moment from "moment";
 
 const UserDetails = () => {
   // ALL HOOKS AT TOP
@@ -20,16 +19,17 @@ const UserDetails = () => {
   const isAdmin = userInfo?.role === "Admin";
   const [tempStatus, setTempStatus] = useState("Pending");
 
-  const doctor = user?.doctorProfile;
-  const petOwner = user?.petOwnerProfile;
-  const isDoctor = !!doctor;
-  const isPetOwner = !!petOwner;
-  const currentStatus = doctor?.verificationUploads?.status || "Pending";
+ const doctor = user?.doctorProfile;
+const petOwner = user?.petOwnerProfile;
+const isDoctor = !!doctor;
+const isPetOwner = !!petOwner;
+const verificationStatus = doctor?.verificationUploads?.status || "Pending";
+const availabilityStatus = doctor?.availableNow === true; 
 
-  // Sync tempStatus with currentStatus
+  // Sync tempStatus with verificationStatus
   useEffect(() => {
-    setTempStatus(currentStatus);
-  }, [currentStatus]);
+    setTempStatus(verificationStatus);
+  }, [verificationStatus]);
 
   if (isLoading) return <Loader />;
   if (error)
@@ -40,12 +40,12 @@ const UserDetails = () => {
     );
 
   const handleConfirmStatus = async () => {
-    if (tempStatus === currentStatus) return;
+    if (tempStatus === verificationStatus) return;
 
     try {
       await updateUser({ userId: user._id, status: tempStatus }).unwrap();
       toast.success(`Doctor status updated to ${tempStatus} successfully!`);
-      refetch(); // Refetch to get updated data
+      refetch();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to update doctor status");
     }
@@ -55,14 +55,35 @@ const UserDetails = () => {
     setTempStatus(e.target.value);
   };
 
-  const renderDoctorStatusBadge = (status) => {
+  const renderAvailabilityBadge = (availableNow) => {
+    if (availableNow) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Available
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-300">
+        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Unavailable
+      </span>
+    );
+  };
+
+  const renderVerificationBadge = (status) => {
     if (status === "Approved") {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">
           <svg className="w-3 h-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414-1.414L8 11.172 4.707 7.879A1 1 0 003.293 9.293l4 4a1 1 0 001.414 0l8-8z" clipRule="evenodd" />
           </svg>
-          Approved
+          Verified
         </span>
       );
     }
@@ -163,11 +184,7 @@ const UserDetails = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Admin Menu */}
-          {isAdmin && (
-            <div className="lg:col-span-1">
-              <AdminMenu />
-            </div>
-          )}
+      
 
           {/* Main Content */}
           <div className={`${isAdmin ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
@@ -188,9 +205,10 @@ const UserDetails = () => {
                         {user?.fullName?.charAt(0) || "U"}
                       </div>
                     )}
+                    {/* Availability Badge - Always visible for doctors */}
                     {isDoctor && (
-                      <div className="absolute -bottom-2 -right-2 bg-white text-navigray px-3 py-1 rounded-full text-sm font-semibold shadow-md">
-                        {renderDoctorStatusBadge(currentStatus)}
+                      <div className="absolute -bottom-2 -right-2 bg-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                        {renderAvailabilityBadge(availabilityStatus)}
                       </div>
                     )}
                   </div>
@@ -247,7 +265,7 @@ const UserDetails = () => {
 
               {/* Profile Details */}
               <div className="p-8">
-                {/* Admin Doctor Status Control */}
+                {/* Admin Doctor Verification Control - Only visible to admins */}
                 {isAdmin && isDoctor && (
                   <div className="mb-8 p-6 bg-gray-50 rounded-xl border-l-4 border-navigray">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctor Verification</h3>
@@ -269,7 +287,7 @@ const UserDetails = () => {
                           </select>
                           <button
                             onClick={handleConfirmStatus}
-                            disabled={tempStatus === currentStatus || updatingStatus}
+                            disabled={tempStatus === verificationStatus || updatingStatus}
                             className="px-6 py-3 bg-navigray text-white rounded-lg font-medium hover:bg-navigray-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navigray disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap"
                           >
                             {updatingStatus ? (
@@ -284,7 +302,7 @@ const UserDetails = () => {
                           </button>
                         </div>
                         <p className="text-sm text-gray-500 mt-2">
-                          Current status: <span className="font-medium">{currentStatus}</span>
+                          Current status: <span className="font-medium">{verificationStatus}</span>
                         </p>
                       </div>
                     </div>
@@ -364,17 +382,33 @@ const UserDetails = () => {
                             Services Offered
                           </h3>
                           <div className="space-y-3">
-                            {Object.entries(doctor.servicesOffered).map(([key, value]) => (
+                            {Object.entries(doctor.servicesOffered).map(([key, service]) => (
                               <div
                                 key={key}
-                                className={`flex items-center p-3 rounded-lg ${
-                                  value ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                                className={`p-3 rounded-lg ${
+                                  service.available ? 'bg-green-50' : 'bg-gray-100'
                                 }`}
                               >
-                                <div className={`w-2 h-2 rounded-full mr-3 ${
-                                  value ? 'bg-green-500' : 'bg-gray-400'
-                                }`} />
-                                <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center">
+                                    <div className={`w-2 h-2 rounded-full mr-2 ${
+                                      service.available ? 'bg-green-500' : 'bg-gray-400'
+                                    }`} />
+                                    <span className="font-medium capitalize">
+                                      {key.replace(/([A-Z])/g, ' $1')}
+                                    </span>
+                                  </div>
+                                  {service.available && service.charges > 0 && (
+                                    <span className="text-green-700 font-semibold text-sm">
+                                      PKR {service.charges}
+                                    </span>
+                                  )}
+                                </div>
+                                {service.available && service.description && (
+                                  <p className="text-sm text-gray-600 mt-1 ml-4">
+                                    {service.description}
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -475,14 +509,14 @@ const UserDetails = () => {
                           {doctor.homeVisitDetails.charges && (
                             <div>
                               <p className="text-sm text-gray-600 mb-2">Charges</p>
-                              <p className="text-lg font-bold text-gray-900">${doctor.homeVisitDetails.charges}</p>
+                              <p className="text-lg font-bold text-gray-900">PKR {doctor.homeVisitDetails.charges}</p>
                             </div>
                           )}
                         </div>
                       </div>
                     )}
 
-                    {/* Reviews Section - Added Here */}
+                    {/* Reviews Section */}
                     {doctor?.reviews && doctor.reviews.length > 0 && (
                       <div className="bg-gray-50 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -503,7 +537,7 @@ const UserDetails = () => {
                       </div>
                     )}
 
-                    {/* Verification Documents */}
+                    {/* Verification Documents - Only visible to admins */}
                     {isAdmin && doctor?.verificationUploads?.veterinaryLicense && (
                       <div className="bg-gray-50 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -511,6 +545,9 @@ const UserDetails = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                           </svg>
                           Verification Documents
+                          <span className="ml-3">
+                            {renderVerificationBadge(verificationStatus)}
+                          </span>
                         </h3>
                         <div className="flex items-center gap-4">
                           <img

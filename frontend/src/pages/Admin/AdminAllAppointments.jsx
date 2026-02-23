@@ -3,7 +3,6 @@ import moment from "moment";
 import {
   useGetAppointmentsQuery,
 } from "../../redux/api/appointmentApiSlice";
-import AdminMenu from "../../components/AdminMenu";
 import Loader from "../../components/Loader";
 import { 
   FaCalendar, 
@@ -524,7 +523,7 @@ const AdminAllAppointments = () => {
 
           {/* Sidebar */}
           <div className="lg:w-1/4">
-            <AdminMenu />
+           
             
             {/* Stats Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-8">

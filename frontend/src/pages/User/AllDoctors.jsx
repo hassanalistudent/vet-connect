@@ -87,6 +87,30 @@ const AllDoctors = () => {
   );
 };
 
+// Star Rating Component
+const StarRating = ({ rating, numReviews }) => {
+  const stars = [1, 2, 3, 4, 5];
+  
+  return (
+    <div className="flex items-center">
+      <div className="flex items-center space-x-0.5">
+        {stars.map((star) => (
+          <span key={star} className="text-sm">
+            {star <= Math.round(rating) ? (
+              <span className="text-yellow-500">★</span>
+            ) : (
+              <span className="text-gray-300">★</span>
+            )}
+          </span>
+        ))}
+      </div>
+      <span className="ml-2 text-sm text-gray-600">
+        ({numReviews || 0})
+      </span>
+    </div>
+  );
+};
+
 const DoctorCard = ({ doctor }) => {
   // Direct image URL usage + Windows path fix
   const doctorImage = doctor.doctorProfile?.image 
@@ -97,6 +121,13 @@ const DoctorCard = ({ doctor }) => {
   const isVerified = doctor.doctorProfile?.verificationUploads?.status === "Approved";
   const isPending = doctor.doctorProfile?.verificationUploads?.status === "Pending";
   const isRejected = doctor.doctorProfile?.verificationUploads?.status === "Rejected";
+
+  // Availability status
+  const isAvailableNow = doctor.doctorProfile?.availableNow === true;
+
+  // Rating and reviews
+  const rating = doctor.doctorProfile?.rating || 0;
+  const numReviews = doctor.doctorProfile?.numReviews || 0;
 
   return (
     <Link 
@@ -114,8 +145,19 @@ const DoctorCard = ({ doctor }) => {
             e.target.className = "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300";
           }}
         />
-        {/* Verification Badge */}
-        <div className="absolute top-4 right-4">
+        {/* Badges Container */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2">
+          {/* Available Now Badge */}
+          {isAvailableNow && (
+            <span className="px-3 py-1.5 text-xs font-semibold rounded-full shadow-md bg-green-500 text-white border border-green-600 animate-pulse">
+              <span className="flex items-center">
+                <span className="w-2 h-2 bg-white rounded-full mr-1.5 animate-ping opacity-75"></span>
+                Available Now
+              </span>
+            </span>
+          )}
+          
+          {/* Verification Badge */}
           <span className={`px-3 py-1.5 text-xs font-semibold rounded-full shadow-md ${
             isVerified 
               ? 'bg-green-100 text-green-800 border border-green-200' 
@@ -126,6 +168,7 @@ const DoctorCard = ({ doctor }) => {
             {isVerified ? 'Verified' : isRejected ? 'Rejected' : 'Pending'}
           </span>
         </div>
+        
         {/* Image Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
@@ -133,14 +176,33 @@ const DoctorCard = ({ doctor }) => {
       {/* Doctor Info */}
       <div className="p-6 flex-1 flex flex-col">
         {/* Name and Title */}
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-gray-900 mb-1">
-            Dr. {doctor.fullName}
-          </h3>
+        <div className="mb-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-gray-900 mb-1">
+              Dr. {doctor.fullName}
+            </h3>
+            {/* Small availability indicator for mobile/list view */}
+            {isAvailableNow && (
+              <span className="md:hidden text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                Available
+              </span>
+            )}
+          </div>
           {doctor.doctorProfile?.degreeName && (
             <p className="text-gray-600 text-sm">{doctor.doctorProfile.degreeName}</p>
           )}
         </div>
+
+        {/* Rating Display */}
+        {numReviews > 0 ? (
+          <div className="mb-3">
+            <StarRating rating={rating} numReviews={numReviews} />
+          </div>
+        ) : (
+          <div className="mb-3 text-sm text-gray-500">
+            No reviews yet
+          </div>
+        )}
 
         {/* Specialization */}
         {doctor.doctorProfile?.specialization && (
@@ -186,19 +248,31 @@ const DoctorCard = ({ doctor }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
               <span className="text-sm">
-                {Object.values(doctor.doctorProfile.servicesOffered).filter(v => v).length} services
+                {Object.values(doctor.doctorProfile.servicesOffered).filter(v => v.available).length} services available
               </span>
+            </div>
+          )}
+
+          {/* Availability indicator for desktop */}
+          {isAvailableNow && (
+            <div className="hidden md:flex items-center text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+              <span className="text-sm font-medium">Accepting appointments now</span>
             </div>
           )}
         </div>
 
         {/* Book Button */}
         <div className="mt-auto pt-4 border-t border-gray-100">
-          <button className="w-full bg-navigray text-white py-3 px-4 rounded-lg font-medium hover:bg-navigray-dark transition-colors flex items-center justify-center group-hover:shadow-md">
+          <button className={`w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center group-hover:shadow-md ${
+            isAvailableNow 
+              ? 'bg-green-600 hover:bg-green-700 text-white' 
+              : 'bg-navigray hover:bg-navigray-dark text-white'
+          }`}>
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            View Profile & Book
+            {isAvailableNow ? 'Book Now' : 'View Profile & Book'}
           </button>
         </div>
       </div>

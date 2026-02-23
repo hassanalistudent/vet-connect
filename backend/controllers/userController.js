@@ -229,7 +229,6 @@ const getCurrentUserProfile = asyncHandler(async (req, res) => {
 });
 
 
-// Create profile (Doctor or PetOwner depending on role)
 const createProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);   // ✅ use authenticated user
   if (!user) {
@@ -247,11 +246,30 @@ const createProfile = asyncHandler(async (req, res) => {
     profile = new DoctorProfile({
       userId: user._id,   // ✅ link to authenticated user
       pvmcRegistrationNumber: req.body.pvmcRegistrationNumber,
-      image:req.body.image,
+      image: req.body.image,
       degreeName: req.body.degreeName,
       yearsOfExperience: req.body.yearsOfExperience,
       specialization: req.body.specialization,
-      servicesOffered: req.body.servicesOffered,
+
+      // ✅ Updated servicesOffered with charges + description
+      servicesOffered: {
+        videoConsultation: {
+          available: req.body.servicesOffered?.videoConsultation?.available || false,
+          charges: req.body.servicesOffered?.videoConsultation?.charges || 0,
+          description: req.body.servicesOffered?.videoConsultation?.description || "",
+        },
+        clinicConsultation: {
+          available: req.body.servicesOffered?.clinicConsultation?.available || false,
+          charges: req.body.servicesOffered?.clinicConsultation?.charges || 0,
+          description: req.body.servicesOffered?.clinicConsultation?.description || "",
+        },
+        homeVisit: {
+          available: req.body.servicesOffered?.homeVisit?.available || false,
+          charges: req.body.servicesOffered?.homeVisit?.charges || 0,
+          description: req.body.servicesOffered?.homeVisit?.description || "",
+        },
+      },
+
       clinicDetails: {
         clinicName: req.body.clinicDetails?.clinicName,
         clinicCity: req.body.clinicDetails?.clinicCity,
@@ -261,10 +279,12 @@ const createProfile = asyncHandler(async (req, res) => {
         startTime: req.body.clinicDetails?.startTime,
         endTime: req.body.clinicDetails?.endTime,
       },
-      homeVisitDetails : {
+
+      homeVisitDetails: {
         areasCovered: req.body.homeVisitDetails?.areasCovered || [],
         charges: req.body.homeVisitDetails?.charges || 0,
-        },
+      },
+
       verificationUploads: req.body.verificationUploads,
     });
 
@@ -297,6 +317,7 @@ const createProfile = asyncHandler(async (req, res) => {
 
   res.status(201).json(profile);
 });
+
 // Update current user profile
 const updateCurrentUserProfile = asyncHandler(async (req, res) => {
   const { userId } = req.body;
@@ -338,7 +359,20 @@ const updateCurrentUserProfile = asyncHandler(async (req, res) => {
           image: req.body.image || undefined,
           yearsOfExperience: req.body.yearsOfExperience || undefined,
           specialization: req.body.specialization || undefined,
-          servicesOffered: req.body.servicesOffered || undefined,
+
+          // ✅ Updated servicesOffered with charges + description
+          "servicesOffered.videoConsultation.available": req.body.servicesOffered?.videoConsultation?.available,
+          "servicesOffered.videoConsultation.charges": req.body.servicesOffered?.videoConsultation?.charges,
+          "servicesOffered.videoConsultation.description": req.body.servicesOffered?.videoConsultation?.description,
+
+          "servicesOffered.clinicConsultation.available": req.body.servicesOffered?.clinicConsultation?.available,
+          "servicesOffered.clinicConsultation.charges": req.body.servicesOffered?.clinicConsultation?.charges,
+          "servicesOffered.clinicConsultation.description": req.body.servicesOffered?.clinicConsultation?.description,
+
+          "servicesOffered.homeVisit.available": req.body.servicesOffered?.homeVisit?.available,
+          "servicesOffered.homeVisit.charges": req.body.servicesOffered?.homeVisit?.charges,
+          "servicesOffered.homeVisit.description": req.body.servicesOffered?.homeVisit?.description,
+
           "clinicDetails.clinicName": req.body.clinicDetails?.clinicName,
           "clinicDetails.clinicCity": req.body.clinicDetails?.clinicCity,
           "clinicDetails.clinicDistrict": req.body.clinicDetails?.clinicDistrict,
@@ -346,8 +380,10 @@ const updateCurrentUserProfile = asyncHandler(async (req, res) => {
           "clinicDetails.googleMapLocation": req.body.clinicDetails?.googleMapLocation,
           "clinicDetails.startTime": req.body.clinicDetails?.startTime,
           "clinicDetails.endTime": req.body.clinicDetails?.endTime,
-          "homeVisitDetails.areasCovered": req.body.homeVisitDetails.areasCovered || undefined,
-          "homeVisitDetails.charges": req.body.homeVisitDetails.charges || undefined,
+
+          "homeVisitDetails.areasCovered": req.body.homeVisitDetails?.areasCovered || undefined,
+          "homeVisitDetails.charges": req.body.homeVisitDetails?.charges || undefined,
+
           verificationUploads: req.body.verificationUploads || undefined,
         },
       },
@@ -381,6 +417,7 @@ const updateCurrentUserProfile = asyncHandler(async (req, res) => {
 
   res.json(updatedUser);
 });
+
 // Admin: delete user
 const deleteUserById = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
@@ -470,7 +507,7 @@ const updateUserById = asyncHandler(async (req, res) => {
 });
 
 
-// ✅ Add this controller to get ALL DOCTORS (Admin Only)
+// ✅ Add this controller to get ALL DOCTORS (only verified)
 const getAllDoctors = asyncHandler(async (req, res) => {
   // Find users with role "Doctor" and populate their doctorProfile
   const doctors = await User.find({ role: "Doctor" })
@@ -491,10 +528,21 @@ const getAllDoctors = asyncHandler(async (req, res) => {
     });
   }
 
+  // Filter to only include doctors whose verification status is "Approved"
+  const verifiedDoctors = doctors.filter(doctor => 
+    doctor.doctorProfile?.verificationUploads?.status === "Approved"
+  );
+
+  if (verifiedDoctors.length === 0) {
+    return res.status(404).json({ 
+      message: "No verified doctors found" 
+    });
+  }
+
   res.status(200).json({
     success: true,
-    count: doctors.length,
-    doctors
+    count: verifiedDoctors.length,
+    doctors: verifiedDoctors
   });
 });
 
@@ -564,6 +612,25 @@ const addDoctorReview = async (req, res) => {
     res.status(500).json({ error: error.message || "Server error" });
   }
 };
+const updateDoctorAvailability = asyncHandler(async (req, res) => {
+  const { availableNow } = req.body; // expects true/false
+
+  // Ensure doctor profile exists
+  const doctorProfile = await DoctorProfile.findOne({ userId: req.user._id });
+  if (!doctorProfile) {
+    return res.status(404).json({ message: "Doctor profile not found" });
+  }
+
+  // Update availability
+  doctorProfile.availableNow = availableNow;
+  await doctorProfile.save();
+
+  res.status(200).json({
+    message: "Availability updated successfully",
+    availableNow: doctorProfile.availableNow,
+  });
+});
+
 
 export {
   createUser,
@@ -582,5 +649,6 @@ export {
   forgotPassword,
   resetPassword,
   checkVerified,
-  addDoctorReview
+  addDoctorReview,
+  updateDoctorAvailability
 };

@@ -34,6 +34,8 @@ const CreateAppointment = () => {
     appointmentType: "",
   });
 
+  const [selectedServiceDetails, setSelectedServiceDetails] = useState(null);
+
   // Check if profile is complete
   const isProfileComplete = userProfile;
 
@@ -42,17 +44,32 @@ const CreateAppointment = () => {
 
   // Get available appointment types based on doctor's services
   const getAvailableAppointmentTypes = () => {
-    if (!doctorProfile) return [];
+    if (!doctorProfile?.servicesOffered) return [];
     
     const types = [];
-    if (doctorProfile.servicesOffered?.videoConsultation) {
-      types.push({ value: "Video Call", label: "Video Call" });
+    if (doctorProfile.servicesOffered.videoConsultation?.available) {
+      types.push({
+        value: "Video Call",
+        label: "Video Call",
+        serviceKey: "videoConsultation",
+        details: doctorProfile.servicesOffered.videoConsultation
+      });
     }
-    if (doctorProfile.servicesOffered?.clinicConsultation) {
-      types.push({ value: "On Clinic", label: "Clinic Visit" });
+    if (doctorProfile.servicesOffered.clinicConsultation?.available) {
+      types.push({
+        value: "On Clinic",
+        label: "Clinic Visit",
+        serviceKey: "clinicConsultation",
+        details: doctorProfile.servicesOffered.clinicConsultation
+      });
     }
-    if (doctorProfile.servicesOffered?.homeVisit) {
-      types.push({ value: "Home Visit", label: "Home Visit" });
+    if (doctorProfile.servicesOffered.homeVisit?.available) {
+      types.push({
+        value: "Home Visit",
+        label: "Home Visit",
+        serviceKey: "homeVisit",
+        details: doctorProfile.servicesOffered.homeVisit
+      });
     }
     return types;
   };
@@ -61,6 +78,36 @@ const CreateAppointment = () => {
 
   // Get doctor's name from user object
   const doctorName = doctorUser?.fullName || doctorUser?.username || "the veterinarian";
+
+  // Update charges when appointment type changes
+  useEffect(() => {
+    if (formData.appointmentType && availableTypes.length > 0) {
+      const selectedType = availableTypes.find(
+        type => type.value === formData.appointmentType
+      );
+      
+      if (selectedType) {
+        setSelectedServiceDetails(selectedType);
+        
+        // If it's a home visit, check if home visit has its own charges
+        if (formData.appointmentType === "Home Visit" && doctorProfile.homeVisitDetails?.charges) {
+          setFormData(prev => ({
+            ...prev,
+            charges: doctorProfile.homeVisitDetails.charges
+          }));
+        } else {
+          // Use charges from servicesOffered
+          setFormData(prev => ({
+            ...prev,
+            charges: selectedType.details?.charges || ""
+          }));
+        }
+      }
+    } else {
+      setSelectedServiceDetails(null);
+      setFormData(prev => ({ ...prev, charges: "" }));
+    }
+  }, [formData.appointmentType, availableTypes, doctorProfile.homeVisitDetails]);
 
   const handlePetChange = (e) => {
     setFormData((prev) => ({ ...prev, petId: e.target.value }));
@@ -238,7 +285,7 @@ const CreateAppointment = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
@@ -260,105 +307,223 @@ const CreateAppointment = () => {
           </button>
         </div>
 
-        {/* Doctor Info Card */}
-        {doctorUser && (
-          <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center">
-              {doctorProfile.image ? (
-                <img 
-                  src={doctorProfile.image} 
-                  alt={doctorName} 
-                  className="w-16 h-16 rounded-full object-cover border-2 border-navigray mr-4"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-navigray/10 flex items-center justify-center mr-4">
-                  <svg className="w-8 h-8 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+        {/* Doctor Profile Card */}
+        <div className="mb-8 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+          <div className="bg-gradient-to-r from-navigray to-navigray-dark px-6 py-4">
+            <h2 className="text-xl font-bold text-white">Doctor Information</h2>
+          </div>
+          
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Doctor Image */}
+              <div className="flex-shrink-0">
+                <div className="w-32 h-32 rounded-xl overflow-hidden border-4 border-navigray/20 shadow-md">
+                  {doctorProfile.image ? (
+                    <img 
+                      src={doctorProfile.image} 
+                      alt={doctorName} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-navigray/10 flex items-center justify-center">
+                      <svg className="w-16 h-16 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {doctorName}
-                </h2>
-                <p className="text-gray-600">
-                  {doctorProfile?.specialization || "General Practice"} 
-                  {doctorProfile?.yearsOfExperience ? ` • ${doctorProfile.yearsOfExperience} years experience` : ''}
-                </p>
+              </div>
+
+              {/* Doctor Details */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-sm text-gray-600 mb-1">Full Name</p>
+                  <p className="font-semibold text-gray-900">{doctorName}</p>
+                </div>
+                
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-sm text-gray-600 mb-1">Specialization</p>
+                  <p className="font-semibold text-gray-900">
+                    {doctorProfile?.specialization || "General Practice"}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-sm text-gray-600 mb-1">Experience</p>
+                  <p className="font-semibold text-gray-900">
+                    {doctorProfile?.yearsOfExperience ? `${doctorProfile.yearsOfExperience} years` : "Not specified"}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-sm text-gray-600 mb-1">Degree</p>
+                  <p className="font-semibold text-gray-900">
+                    {doctorProfile?.degreeName || "Not specified"}
+                  </p>
+                </div>
+
                 {doctorProfile?.pvmcRegistrationNumber && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    PVMC: {doctorProfile.pvmcRegistrationNumber}
-                  </p>
+                  <div className="bg-gray-50 rounded-xl p-4 md:col-span-2">
+                    <p className="text-sm text-gray-600 mb-1">PVMC Registration</p>
+                    <p className="font-semibold text-gray-900">{doctorProfile.pvmcRegistrationNumber}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Clinic Details Card */}
+        {doctorProfile?.clinicDetails && (
+          <div className="mb-8 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+              <h2 className="text-xl font-bold text-white">Clinic Information</h2>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {doctorProfile.clinicDetails.clinicName && (
+                  <div className="bg-purple-50 rounded-xl p-4">
+                    <p className="text-sm text-purple-600 mb-1">Clinic Name</p>
+                    <p className="font-semibold text-gray-900">{doctorProfile.clinicDetails.clinicName}</p>
+                  </div>
+                )}
+
+                {(doctorProfile.clinicDetails.clinicCity || doctorProfile.clinicDetails.clinicDistrict) && (
+                  <div className="bg-purple-50 rounded-xl p-4">
+                    <p className="text-sm text-purple-600 mb-1">Location</p>
+                    <p className="font-semibold text-gray-900">
+                      {doctorProfile.clinicDetails.clinicCity}
+                      {doctorProfile.clinicDetails.clinicDistrict && `, ${doctorProfile.clinicDetails.clinicDistrict}`}
+                    </p>
+                  </div>
+                )}
+
+                {doctorProfile.clinicDetails.clinicStreet && (
+                  <div className="bg-purple-50 rounded-xl p-4">
+                    <p className="text-sm text-purple-600 mb-1">Street Address</p>
+                    <p className="font-semibold text-gray-900">{doctorProfile.clinicDetails.clinicStreet}</p>
+                  </div>
+                )}
+
+                {(doctorProfile.clinicDetails.startTime && doctorProfile.clinicDetails.endTime) && (
+                  <div className="bg-purple-50 rounded-xl p-4">
+                    <p className="text-sm text-purple-600 mb-1">Working Hours</p>
+                    <p className="font-semibold text-gray-900">
+                      {doctorProfile.clinicDetails.startTime} – {doctorProfile.clinicDetails.endTime}
+                    </p>
+                  </div>
+                )}
+
+                {doctorProfile.clinicDetails.googleMapLocation && (
+                  <div className="bg-purple-50 rounded-xl p-4 md:col-span-2">
+                    <a
+                      href={doctorProfile.clinicDetails.googleMapLocation}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 hover:text-purple-700 font-medium flex items-center"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      View on Google Maps
+                    </a>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         )}
 
-
-        {/* Doctor Services Banner */}
-        {availableTypes.length > 0 && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <div className="flex items-center flex-wrap gap-2">
-              <span className="text-blue-800 font-semibold">Available Services:</span>
-              {availableTypes.map(type => (
-                <span key={type.value} className="inline-flex items-center px-3 py-1 bg-white rounded-full text-sm border border-blue-200">
-                  <span className="mr-1">{type.icon}</span>
-                  {type.label}
-                </span>
-              ))}
+        {/* Home Visit Details Card */}
+        {doctorProfile?.homeVisitDetails && (
+          <div className="mb-8 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+            <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4">
+              <h2 className="text-xl font-bold text-white">Home Visit Information</h2>
             </div>
-          </div>
-        )}
-
-        {/* Clinic/Hours Info if applicable */}
-        {(doctorProfile?.clinicDetails?.clinicName || doctorProfile?.clinicDetails?.startTime) && (
-          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-            <div className="flex items-start">
-              <svg className="w-5 h-5 mr-3 text-purple-600 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l14-7V5" />
-              </svg>
-              <div>
-                {doctorProfile.clinicDetails?.clinicName && (
-                  <p className="text-purple-800 font-medium">{doctorProfile.clinicDetails.clinicName}</p>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {doctorProfile.homeVisitDetails.areasCovered?.length > 0 && (
+                  <div className="bg-indigo-50 rounded-xl p-4 md:col-span-2">
+                    <p className="text-sm text-indigo-600 mb-2">Areas Covered</p>
+                    <div className="flex flex-wrap gap-2">
+                      {doctorProfile.homeVisitDetails.areasCovered.map((area, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-white rounded-full text-sm text-indigo-700 border border-indigo-200"
+                        >
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
-                <p className="text-purple-700 text-sm">
-                  {doctorProfile.clinicDetails?.clinicCity && `${doctorProfile.clinicDetails.clinicCity}, `}
-                  {doctorProfile.clinicDetails?.clinicDistrict && `${doctorProfile.clinicDetails.clinicDistrict}`}
-                  {doctorProfile.clinicDetails?.clinicStreet && `, ${doctorProfile.clinicDetails.clinicStreet}`}
-                </p>
-                {doctorProfile.clinicDetails?.startTime && doctorProfile.clinicDetails?.endTime && (
-                  <p className="text-purple-700 text-sm mt-1">
-                    Clinic Hours: {doctorProfile.clinicDetails.startTime} - {doctorProfile.clinicDetails.endTime}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Home Visit Areas if applicable */}
-        {doctorProfile?.homeVisitDetails?.areasCovered && doctorProfile.homeVisitDetails.areasCovered.length > 0 && (
-          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-            <div className="flex items-start">
-              <svg className="w-5 h-5 mr-3 text-indigo-600 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              <div>
-                <p className="text-indigo-800 font-medium">Home Visit Areas</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {doctorProfile.homeVisitDetails.areasCovered.map((area, index) => (
-                    <span key={index} className="px-2 py-1 bg-white rounded text-xs text-indigo-700 border border-indigo-200">
-                      {area}
-                    </span>
-                  ))}
-                </div>
                 {doctorProfile.homeVisitDetails.charges && (
-                  <p className="text-indigo-700 text-sm mt-2">
-                    Home Visit Charges: {doctorProfile.homeVisitDetails.charges} PKR
-                  </p>
+                  <div className="bg-indigo-50 rounded-xl p-4">
+                    <p className="text-sm text-indigo-600 mb-1">Base Charges</p>
+                    <p className="font-semibold text-gray-900">PKR {doctorProfile.homeVisitDetails.charges}</p>
+                  </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Services Cards */}
+        {availableTypes.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Available Services</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {availableTypes.map((service) => (
+                <div
+                  key={service.value}
+                  className={`bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                    formData.appointmentType === service.value
+                      ? 'border-navigray ring-2 ring-navigray/20'
+                      : 'border-gray-200 hover:border-navigray/50'
+                  }`}
+                  onClick={() => setFormData(prev => ({ ...prev, appointmentType: service.value }))}
+                >
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        service.value === "Video Call" ? "bg-blue-100" :
+                        service.value === "On Clinic" ? "bg-purple-100" : "bg-indigo-100"
+                      }`}>
+                        <span className="text-xl">
+                          {service.value === "Video Call" ? "📹" :
+                           service.value === "On Clinic" ? "🏥" : "🏠"}
+                        </span>
+                      </div>
+                      {formData.appointmentType === service.value && (
+                        <div className="w-6 h-6 rounded-full bg-navigray flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{service.label}</h3>
+                    
+                    {service.details?.description && (
+                      <p className="text-sm text-gray-600 mb-3">{service.details.description}</p>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">Charges</span>
+                      <span className="font-bold text-navigray">
+                        PKR {service.value === "Home Visit" && doctorProfile.homeVisitDetails?.charges
+                          ? doctorProfile.homeVisitDetails.charges
+                          : service.details?.charges || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -379,9 +544,9 @@ const CreateAppointment = () => {
                 Select Your Pet <span className="text-red-500">*</span>
               </label>
               
-              {/* Pet Selection Grid */}
+              {/* Pet Selection Cards */}
               {pets.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {pets.map((pet) => (
                     <div
                       key={pet._id}
@@ -528,7 +693,7 @@ const CreateAppointment = () => {
               </div>
             </div>
 
-            {/* Appointment Type & Charges */}
+            {/* Appointment Type & Charges - Display Only */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -543,7 +708,7 @@ const CreateAppointment = () => {
                   <option value="">Select Type</option>
                   {availableTypes.map(type => (
                     <option key={type.value} value={type.value}>
-                      {type.icon} {type.label}
+                      {type.label}
                     </option>
                   ))}
                 </select>
@@ -551,20 +716,23 @@ const CreateAppointment = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Charges (Optional)
+                  Charges (Auto-calculated)
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">PKR</span>
                   <input
-                    type="number"
+                    type="text"
                     value={formData.charges}
-                    onChange={(e) => setFormData(prev => ({ ...prev, charges: e.target.value }))}
-                    placeholder="0.00"
-                    className="w-full pl-12 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
-                    min="0"
-                    step="0.01"
+                    readOnly
+                    disabled
+                    className="w-full pl-12 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
                   />
                 </div>
+                {selectedServiceDetails && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Charges are based on the selected service type
+                  </p>
+                )}
               </div>
             </div>
 

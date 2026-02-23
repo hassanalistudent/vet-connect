@@ -21,7 +21,6 @@ import {
   useUpdateUserMutation,
 } from "../../redux/api/userApiSlice";
 import Message from "../../components/Message";
-import AdminMenu from "../../components/AdminMenu";
 
 export const UserList = () => {
   const {
@@ -165,7 +164,6 @@ export const UserList = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <div className="lg:w-1/4">
-            <AdminMenu />
             
             {/* Stats Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-8">

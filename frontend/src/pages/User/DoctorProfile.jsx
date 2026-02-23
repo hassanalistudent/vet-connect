@@ -24,7 +24,6 @@ const DoctorProfile = ({ userInfo }) => {
     degreeName: "",
     yearsOfExperience: "",
     specialization: "",
-    charges: "",
     image: null,
     verificationUploads: {
       veterinaryLicense: null,
@@ -32,11 +31,23 @@ const DoctorProfile = ({ userInfo }) => {
     },
   });
 
-  // Services Offered
+  // Services Offered - Updated to match new schema
   const [servicesOffered, setServicesOffered] = useState({
-    videoConsultation: false,
-    clinicConsultation: false,
-    homeVisit: false,
+    videoConsultation: {
+      available: false,
+      charges: "",
+      description: ""
+    },
+    clinicConsultation: {
+      available: false,
+      charges: "",
+      description: ""
+    },
+    homeVisit: {
+      available: false,
+      charges: "",
+      description: ""
+    }
   });
 
   // Clinic Details
@@ -50,7 +61,7 @@ const DoctorProfile = ({ userInfo }) => {
     endTime: "",
   });
 
-  // Home Visit Details
+  // Home Visit Details - Updated structure
   const [homeVisitDetails, setHomeVisitDetails] = useState({
     areasCovered: [],
     charges: ""
@@ -95,11 +106,12 @@ const DoctorProfile = ({ userInfo }) => {
         },
       }));
 
+      // Set services offered with new structure
       setServicesOffered(
         profile.doctorProfile.servicesOffered || {
-          videoConsultation: false,
-          clinicConsultation: false,
-          homeVisit: false,
+          videoConsultation: { available: false, charges: "", description: "" },
+          clinicConsultation: { available: false, charges: "", description: "" },
+          homeVisit: { available: false, charges: "", description: "" }
         }
       );
 
@@ -228,6 +240,39 @@ const DoctorProfile = ({ userInfo }) => {
     }
   };
 
+  // Handle service availability toggle
+  const handleServiceToggle = (service) => {
+    setServicesOffered(prev => ({
+      ...prev,
+      [service]: {
+        ...prev[service],
+        available: !prev[service].available
+      }
+    }));
+  };
+
+  // Handle service charges change
+  const handleServiceCharges = (service, value) => {
+    setServicesOffered(prev => ({
+      ...prev,
+      [service]: {
+        ...prev[service],
+        charges: value
+      }
+    }));
+  };
+
+  // Handle service description change
+  const handleServiceDescription = (service, value) => {
+    setServicesOffered(prev => ({
+      ...prev,
+      [service]: {
+        ...prev[service],
+        description: value
+      }
+    }));
+  };
+
   // Create handler
   const createHandler = async (e) => {
     e.preventDefault();
@@ -286,9 +331,9 @@ const DoctorProfile = ({ userInfo }) => {
 
       setServicesOffered(
         profile.doctorProfile.servicesOffered || {
-          videoConsultation: false,
-          clinicConsultation: false,
-          homeVisit: false,
+          videoConsultation: { available: false, charges: "", description: "" },
+          clinicConsultation: { available: false, charges: "", description: "" },
+          homeVisit: { available: false, charges: "", description: "" }
         }
       );
 
@@ -586,40 +631,69 @@ const DoctorProfile = ({ userInfo }) => {
                     </div>
                   </div>
 
-                  {/* Services Offered */}
+                  {/* Services Offered - Updated to include charges and description */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
                       Services Offered
                     </h3>
-                    <div className="space-y-3">
-                      {Object.entries(servicesOffered).map(([key, value]) => (
-                        <label key={key} className="flex items-center space-x-3 cursor-pointer">
-                          <div className="relative">
-                            <input
-                              type="checkbox"
-                              checked={value}
-                              onChange={(e) =>
-                                setServicesOffered({
-                                  ...servicesOffered,
-                                  [key]: e.target.checked,
-                                })
-                              }
-                              className="sr-only"
-                            />
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                              value ? 'bg-navigray border-navigray' : 'border-gray-300'
-                            }`}>
-                              {value && (
-                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
+                    <div className="space-y-6">
+                      {Object.entries(servicesOffered).map(([key, service]) => (
+                        <div key={key} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  checked={service.available}
+                                  onChange={() => handleServiceToggle(key)}
+                                  className="sr-only"
+                                />
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                                  service.available ? 'bg-navigray border-navigray' : 'border-gray-300'
+                                }`}>
+                                  {service.available && (
+                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-gray-700 font-medium capitalize">
+                                {key.replace(/([A-Z])/g, ' $1')}
+                              </span>
+                            </label>
                           </div>
-                          <span className="text-gray-700 capitalize">
-                            {key.replace(/([A-Z])/g, ' $1')}
-                          </span>
-                        </label>
+                          
+                          {service.available && (
+                            <div className="space-y-3 pl-8">
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-1">
+                                  Charges (PKR)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={service.charges}
+                                  onChange={(e) => handleServiceCharges(key, e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                                  placeholder="Enter charges"
+                                  min="0"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-1">
+                                  Description
+                                </label>
+                                <input
+                                  type="text"
+                                  value={service.description}
+                                  onChange={(e) => handleServiceDescription(key, e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                                  placeholder="e.g., 15-minute online consultation"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -782,7 +856,7 @@ const DoctorProfile = ({ userInfo }) => {
                 </div>
               </div>
 
-              {/* Home Visit Details - New Design */}
+              {/* Home Visit Details */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Home Visit Details
@@ -850,7 +924,7 @@ const DoctorProfile = ({ userInfo }) => {
                       Home Visit Charges
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">PKR</span>
                       <input
                         type="number"
                         value={homeVisitDetails.charges}
@@ -860,9 +934,9 @@ const DoctorProfile = ({ userInfo }) => {
                             charges: e.target.value,
                           }))
                         }
-                        className="w-full pl-8 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                        className="w-full pl-12 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
                         min="0"
-                        placeholder="0.00"
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -1005,7 +1079,7 @@ const DoctorProfile = ({ userInfo }) => {
                     {profile?.fullName || "Doctor Profile"}
                   </h2>
                   
-                  {/* Rating Display - Added here */}
+                  {/* Rating Display */}
                   {numReviews > 0 && (
                     <div className="mt-2 flex items-center justify-center md:justify-start bg-white/20 rounded-lg px-4 py-2 inline-flex">
                       <StarRating rating={doctorRating} />
@@ -1084,7 +1158,7 @@ const DoctorProfile = ({ userInfo }) => {
                     </div>
                   </div>
 
-                  {/* Services Offered */}
+                  {/* Services Offered - Updated display */}
                   <div className="bg-gray-50 rounded-xl p-6">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                       <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1092,18 +1166,34 @@ const DoctorProfile = ({ userInfo }) => {
                       </svg>
                       Services Offered
                     </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {Object.entries(servicesOffered).map(([key, value]) => (
+                    <div className="space-y-4">
+                      {Object.entries(servicesOffered).map(([key, service]) => (
                         <div
                           key={key}
-                          className={`flex items-center p-3 rounded-lg ${
-                            value ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                          className={`p-4 rounded-lg ${
+                            service.available ? 'bg-green-50' : 'bg-gray-100'
                           }`}
                         >
-                          <div className={`w-2 h-2 rounded-full mr-3 ${
-                            value ? 'bg-green-500' : 'bg-gray-400'
-                          }`} />
-                          <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <div className={`w-2 h-2 rounded-full mr-3 ${
+                                service.available ? 'bg-green-500' : 'bg-gray-400'
+                              }`} />
+                              <span className="font-medium capitalize">
+                                {key.replace(/([A-Z])/g, ' $1')}
+                              </span>
+                            </div>
+                            {service.available && (
+                              <span className="text-green-700 font-semibold">
+                                PKR {service.charges}
+                              </span>
+                            )}
+                          </div>
+                          {service.available && service.description && (
+                            <p className="text-sm text-gray-600 mt-1 ml-5">
+                              {service.description}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1198,7 +1288,7 @@ const DoctorProfile = ({ userInfo }) => {
                       {homeVisitDetails.charges && (
                         <div>
                           <p className="text-sm text-gray-600">Charges:</p>
-                          <p className="text-lg font-bold text-gray-900">${homeVisitDetails.charges}</p>
+                          <p className="text-lg font-bold text-gray-900">PKR {homeVisitDetails.charges}</p>
                         </div>
                       )}
                     </div>
@@ -1240,7 +1330,7 @@ const DoctorProfile = ({ userInfo }) => {
                 </div>
               </div>
 
-              {/* Reviews Section - Added here */}
+              {/* Reviews Section */}
               {profile?.doctorProfile && (
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <ReviewsSection 

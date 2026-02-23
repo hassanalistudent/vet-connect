@@ -94,7 +94,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       keepUnusedDataFor: 5,
     }),
 
-    
+
     verifyEmail: builder.query({
       query: ({ token, email }) => ({
         url: `${USERS_URL}/verify-email?token=${token}&email=${email}`,
@@ -102,7 +102,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    
+
     resendVerification: builder.mutation({
       query: (email) => ({
         url: `${USERS_URL}/resend-verification`,
@@ -111,7 +111,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-  
+
     forgotPassword: builder.mutation({
       query: (email) => ({
         url: `${USERS_URL}/forgot-password`,
@@ -143,6 +143,13 @@ export const userApiSlice = apiSlice.injectEndpoints({
         body: data, // { rating, comment }
       }),
     }),
+    updateDoctorAvailability: builder.mutation({
+      query: (data) => ({
+        url: `${USERS_URL}/doctors/availability`,
+        method: "PUT",
+        body: data, // { availableNow: true/false }
+      }),
+    }),
   }),
 });
 
@@ -163,5 +170,6 @@ export const {
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useCheckVerifiedQuery,
-  useAddDoctorReviewMutation, 
+  useAddDoctorReviewMutation,
+  useUpdateDoctorAvailabilityMutation
 } = userApiSlice;
