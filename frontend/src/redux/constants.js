@@ -3,3 +3,4 @@ export const USERS_URL = '/api/users' ;
 export const PETS_URL = '/api/pets' ;
 export const UPLOADS_URL = '/api/upload';
 export const APPOINTMENTS_URL = '/api/appointments';
+export const DASHBOARD_URL = "/api/dashboard";

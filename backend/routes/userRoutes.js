@@ -12,12 +12,13 @@ import {
   getUserById,
   updateUserById,
   getAllDoctors,
-  verifyEmail,        // ✅ email verification
-  createProfile,      // ✅ profile creation
-  resendVerification, // ✅ resend verification controller
-  forgotPassword,     // ✅ forgot password controller
-  resetPassword,       // ✅ reset password controller
- checkVerified
+  verifyEmail,        
+  createProfile,      
+  resendVerification, 
+  forgotPassword,     
+  resetPassword,       
+ checkVerified,
+ addDoctorReview
 } from "../controllers/userController.js";
 
 import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
@@ -29,8 +30,8 @@ router.route("/logout").post(logoutCurrentUser);
 router.route("/verify-email").get(verifyEmail);   
 router.route("/resend-verification").post(resendVerification); 
 router.route("/forgot-password").post(forgotPassword);         
-router.route("/reset-password/:token").post(resetPassword);    // ✅ NEW
-router.route("/verify").get(authenticate,checkVerified);    // ✅ NEW
+router.route("/reset-password/:token").post(resetPassword);  
+router.route("/verify").get(authenticate,checkVerified);    
 
 // Authenticated user routes
 router.route("/profile")
@@ -43,6 +44,7 @@ router.route("/")
   .get(authenticate, authorizeAdmin, getAllUsers);
 
 router.route("/doctors").get(getAllDoctors);
+router.route("/:id/add-doctor-review").post(authenticate,addDoctorReview);
 
 router.route("/:id")
   .delete(authenticate, authorizeAdmin, deleteUserById)

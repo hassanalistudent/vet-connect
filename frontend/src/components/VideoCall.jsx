@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import useAgora from "../hooks/useAgora";
 
-const CHANNEL_NAME = "vetconnect";
-
-export default function VideoCall({ uid }) {
+export default function VideoCall({ appointmentId, uid }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [micOn, setMicOn] = useState(true);
@@ -13,6 +11,9 @@ export default function VideoCall({ uid }) {
   const [showParticipants, setShowParticipants] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
   const [isReconnecting, setIsReconnecting] = useState(false);
+
+  // ✅ Dynamic channel name using appointmentId
+  const CHANNEL_NAME = appointmentId || "vetconnect-default";
 
   const { localTracks, remoteUsers, client } = useAgora(CHANNEL_NAME, uid);
 

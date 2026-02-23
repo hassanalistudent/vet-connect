@@ -5,9 +5,12 @@ import {
   AiOutlineUserAdd,
   AiOutlineUser,
   AiOutlineClose,
-  AiOutlineMenu
+  AiOutlineMenu,
+  AiOutlineDashboard,
+  AiOutlineCalendar,
+  AiOutlineProfile
 } from "react-icons/ai";
-import { FaUserMd, FaDog } from "react-icons/fa";
+import { FaUserMd, FaDog, FaPaw } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import "./Navigation.css";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,8 +20,9 @@ import { logout } from "../../redux/features/auth/authSlice.js";
 const Navigation = () => {
   const { userInfo } = useSelector((state) => state.auth);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -27,28 +31,26 @@ const Navigation = () => {
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true); // Open sidebar by default on desktop
-      } else {
-        setSidebarOpen(false); // Closed by default on mobile
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setMobileMenuOpen(false); // Close mobile menu on desktop
       }
     };
 
-    handleResize(); // Set initial state
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-    setDropdownOpen(false); // Close dropdown when toggling sidebar
-  };
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setProfileDropdownOpen(false);
+  }, [location.pathname]);
 
-  const closeSidebar = () => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
   };
 
   const logoutHandler = async () => {
@@ -61,186 +63,283 @@ const Navigation = () => {
     }
   };
 
+  // Get navigation links based on user role
+  const getNavLinks = () => {
+    const links = [];
+
+    // Home link for everyone
+    links.push({
+      to: "/",
+      icon: <AiOutlineHome className="w-6 h-6" />,
+      label: "Home"
+    });
+
+    if (!userInfo) {
+      // Public links
+      links.push(
+        {
+          to: "/login",
+          icon: <AiOutlineLogin className="w-6 h-6" />,
+          label: "Login"
+        },
+        {
+          to: "/register",
+          icon: <AiOutlineUserAdd className="w-6 h-6" />,
+          label: "Register"
+        }
+      );
+    } else {
+      // Role-based links
+      switch (userInfo.role) {
+        case "Admin":
+          links.push(
+            {
+              to: "/admin/dashboard",
+              icon: <AiOutlineDashboard className="w-6 h-6" />,
+              label: "Dashboard"
+            },
+            {
+              to: "/admin/userslist",
+              icon: <AiOutlineUser className="w-6 h-6" />,
+              label: "Users"
+            },
+            {
+              to: "/admin/allpets",
+              icon: <FaPaw className="w-6 h-6" />,
+              label: "Pets"
+            },
+            {
+              to: "/admin/allappointments",
+              icon: <AiOutlineCalendar className="w-6 h-6" />,
+              label: "Appointments"
+            }
+          );
+          break;
+
+        case "Doctor":
+          links.push(
+            {
+              to: "/doctor/profile",
+              icon: <FaUserMd className="w-6 h-6" />,
+              label: "Profile"
+            },
+            {
+              to: "/doctor/doctor-appointments",
+              icon: <AiOutlineCalendar className="w-6 h-6" />,
+              label: "Appointments"
+            },
+            {
+              to: "/doctor/dashboard",
+              icon: <AiOutlineDashboard className="w-6 h-6" />,
+              label: "Dashboard"
+            }
+          );
+          break;
+
+        case "PetOwner":
+          links.push(
+            {
+              to: "/petowner/vets",
+              icon: <FaUserMd className="w-6 h-6" />,
+              label: "Doctors"
+            },
+            {
+              to: "/petowner/mypets",
+              icon: <FaDog className="w-6 h-6" />,
+              label: "My Pets"
+            },
+           
+            {
+              to: "/petowner/owner-appointments",
+              icon: <AiOutlineCalendar className="w-6 h-6" />,
+              label: "Appointments"
+            },
+            {
+              to: "/petowner/profile",
+              icon: <AiOutlineProfile className="w-6 h-6" />,
+              label: "Profile"
+            }
+          );
+          break;
+      }
+    }
+
+    return links;
+  };
+
+  const navLinks = getNavLinks();
+
   return (
     <>
-      {/* Fixed Logo and Toggle Button Header */}
-      <div className="fixed top-0 left-0 right-0 h-16 bg-black z-[1000] border-b border-white/10 flex items-center px-4">
-        {/* Toggle Button */}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          style={{ zIndex: 1001 }}
-        >
-          {sidebarOpen ? (
-            <AiOutlineClose className="w-6 h-6 text-white" />
-          ) : (
-            <AiOutlineMenu className="w-6 h-6 text-white" />
-          )}
-        </button>
-
-        {/* Logo */}
-        <div className="ml-4 flex items-center">
-          <img 
-            src="/uploads/logo.jpeg" 
-            alt="Logo" 
-            className="h-10 w-10 object-contain rounded"
-          />
-          <span className="ml-3 text-white font-bold text-lg">VettKoneckt</span>
-        </div>
-      </div>
-
-      {/* Overlay for mobile when sidebar is open */}
-      {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[998]"
-          onClick={closeSidebar}
-        />
-      )}
-
-      {/* YouTube-style Sidebar - starts below the header */}
-      <div
-        className={`fixed top-16 left-0 h-[calc(100vh-4rem)] bg-black text-white z-[999] transition-all duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0
-          ${sidebarOpen ? 'w-64' : 'w-20'}
-        `}
-      >
-        {/* Sidebar Content */}
-        <div className="flex flex-col h-full py-4">
-          {/* Main Navigation Links */}
-          <div className="flex-1 px-4 space-y-1 overflow-y-auto">
-            {/* Home Link */}
-            <Link
-              to="/"
-              className="flex items-center p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={closeSidebar}
-            >
-              <AiOutlineHome className="text-xl min-w-[24px]" />
-              <span className={`ml-4 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'} transition-all duration-300 whitespace-nowrap overflow-hidden`}>
-                HOME
+      {/* Top Navigation Bar - Always visible */}
+      <nav className="fixed top-0 left-0 right-0 bg-navigray text-white z-50 border-b border-navigray-dark/20 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo and Company Name - Always visible */}
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="relative">
+                <img 
+                  src="/uploads/logo.jpeg" 
+                  alt="Logo" 
+                  className="h-10 w-10 object-contain rounded border-2 border-white/20 group-hover:border-white/40 transition-all"
+                />
+                <div className="absolute -inset-1 bg-white/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </div>
+              <span className="text-white font-bold text-xl tracking-tight">
+                VettKoneckt
               </span>
             </Link>
 
-            {/* Doctor Link for Pet Owners */}
-            {userInfo?.role === "PetOwner" && (
-              <Link
-                to="petowner/vets"
-                className="flex items-center p-3 rounded-lg hover:bg-white/10 transition-colors"
-                onClick={closeSidebar}
-              >
-                <AiOutlineUser className="text-xl min-w-[24px]" />
-                <span className={`ml-4 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'} transition-all duration-300 whitespace-nowrap overflow-hidden`}>
-                  DOCTORS
-                </span>
-              </Link>
-            )}
-
-            {/* Login/Register for non-authenticated users */}
-            {!userInfo && (
-              <>
+            {/* Desktop Navigation - Center */}
+            <div className="hidden md:flex items-center space-x-1">
+              {navLinks.map((link, index) => (
                 <Link
-                  to="/login"
-                  className="flex items-center p-3 rounded-lg hover:bg-white/10 transition-colors"
-                  onClick={closeSidebar}
+                  key={index}
+                  to={link.to}
+                  className="flex items-center px-4 py-2 rounded-lg hover:bg-navigray-dark/50 transition-all text-sm font-medium group"
                 >
-                  <AiOutlineLogin className="text-xl min-w-[24px]" />
-                  <span className={`ml-4 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'} transition-all duration-300 whitespace-nowrap overflow-hidden`}>
-                    LOGIN
-                  </span>
+                  <span className="mr-2 text-navigray-light group-hover:text-white transition-colors">{link.icon}</span>
+                  <span className="group-hover:text-white transition-colors">{link.label}</span>
                 </Link>
-                <Link
-                  to="/register"
-                  className="flex items-center p-3 rounded-lg hover:bg-white/10 transition-colors"
-                  onClick={closeSidebar}
-                >
-                  <AiOutlineUserAdd className="text-xl min-w-[24px]" />
-                  <span className={`ml-4 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'} transition-all duration-300 whitespace-nowrap overflow-hidden`}>
-                    REGISTER
-                  </span>
-                </Link>
-              </>
-            )}
-          </div>
+              ))}
+            </div>
 
-          {/* User Profile Section - Fixed at bottom */}
-          {userInfo && (
-            <div className="px-4 pt-4 border-t border-white/10">
-              <div className="relative">
+            {/* Desktop Profile Section */}
+            {userInfo && (
+              <div className="hidden md:block relative">
                 <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-white/10 transition-colors"
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-navigray-dark/50 transition-all group"
                 >
-                  <div className="flex items-center min-w-0">
-                    <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                      <AiOutlineUser className="text-lg" />
-                    </div>
-                    <div className={`ml-3 min-w-0 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'} transition-all duration-300 overflow-hidden`}>
-                      <p className="font-medium text-sm truncate">{userInfo.fullName}</p>
-                      <p className="text-xs text-gray-400 truncate">{userInfo.role}</p>
-                    </div>
+                  <div className="w-8 h-8 bg-navigray-dark rounded-full flex items-center justify-center border-2 border-white/20 group-hover:border-white/40 transition-all">
+                    <AiOutlineUser className="text-lg text-white" />
                   </div>
-                  {sidebarOpen && (
-                    <svg
-                      className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  )}
+                  <div className="text-left">
+                    <p className="text-sm font-medium truncate max-w-[150px] text-white">
+                      {userInfo.fullName}
+                    </p>
+                    <p className="text-xs text-navigray-light">{userInfo.role}</p>
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-navigray-light transition-transform duration-300 ${profileDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
 
-                {/* Dropdown Menu */}
-                {dropdownOpen && sidebarOpen && (
-                  <div className="absolute bottom-full left-4 right-4 mb-2 bg-gray-900 rounded-lg shadow-lg overflow-hidden border border-white/10">
-                    {userInfo.role === "Admin" && (
-                      <>
-                        <Link to="/admin/dashboard" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>Dashboard</Link>
-                        <Link to="/admin/userslist" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>Users</Link>
-                        <Link to="/admin/allpets" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>All Pets</Link>
-                        <Link to="/admin/allappointments" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>All Appointments</Link>
-                      </>
-                    )}
-
-                    {userInfo.role === "Doctor" && (
-                      <>
-                        <Link to="/doctor/profile" className="flex items-center px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>
-                          <FaUserMd className="mr-3" /> My Profile
-                        </Link>
-                        <Link to="/doctor/doctor-appointments" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>Appointments</Link>
-                      </>
-                    )}
-
-                    {userInfo.role === "PetOwner" && (
-                      <>
-                        <Link to="/petowner/mypets" className="flex items-center px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>
-                          <FaDog className="mr-3" /> My Pets
-                        </Link>
-                        <Link to="/petowner/createpet" className="flex items-center px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>
-                          <FaDog className="mr-3" /> Create Pet
-                        </Link>
-                        <Link to="/petowner/owner-appointments" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>Appointments</Link>
-                        <Link to="/petowner/profile" className="block px-4 py-3 hover:bg-white/5 transition-colors" onClick={closeSidebar}>Profile</Link>
-                      </>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        logoutHandler();
-                        closeSidebar();
-                      }}
-                      className="block w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-400 transition-colors border-t border-white/10"
-                    >
-                      Logout
-                    </button>
+                {/* Profile Dropdown */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100 animate-fadeIn">
+                    <div className="py-1">
+                      <Link
+                        to={`/${userInfo.role.toLowerCase()}/profile`}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray/5 hover:text-navigray transition-colors"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Profile Settings
+                      </Link>
+                      <button
+                        onClick={logoutHandler}
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Mobile Profile Icon - Right side on mobile */}
+            {userInfo && isMobile && (
+              <div className="md:hidden relative">
+                <button
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="p-2 rounded-lg hover:bg-navigray-dark/50 transition-all group"
+                >
+                  <div className="w-8 h-8 bg-navigray-dark rounded-full flex items-center justify-center border-2 border-white/20 group-hover:border-white/40 transition-all">
+                    <AiOutlineUser className="text-lg text-white" />
+                  </div>
+                </button>
+
+                {/* Mobile Profile Dropdown */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100 animate-fadeIn">
+                    <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-navigray/5 to-transparent">
+                      <p className="font-medium text-gray-900">{userInfo.fullName}</p>
+                      <p className="text-xs text-navigray mt-0.5">{userInfo.role}</p>
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        to={`/${userInfo.role.toLowerCase()}/profile`}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray/5 hover:text-navigray transition-colors"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Profile Settings
+                      </Link>
+                      <button
+                        onClick={() => {
+                          logoutHandler();
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </nav>
+
+      {/* Bottom Navigation Bar - Mobile Only with Icons */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white text-gray-600 z-50 border-t border-gray-200 shadow-lg md:hidden">
+          <div className="flex items-center justify-around h-16">
+            {navLinks.map((link, index) => (
+              <Link
+                key={index}
+                to={link.to}
+                className="flex flex-col items-center justify-center px-3 py-1 rounded-lg hover:text-navigray transition-all group"
+                onClick={() => setProfileDropdownOpen(false)}
+              >
+                <span className="text-xl group-hover:scale-110 transition-transform text-gray-500 group-hover:text-navigray">
+                  {link.icon}
+                </span>
+                <span className="text-[10px] mt-0.5 font-medium text-gray-500 group-hover:text-navigray">
+                  {link.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spacer to prevent content from going under fixed navbars */}
+      <div className={`h-16 ${isMobile ? 'mb-16' : ''}`} />
+
+      {/* Add animation keyframes */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+      `}</style>
     </>
   );
 };

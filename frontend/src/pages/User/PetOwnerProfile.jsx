@@ -89,12 +89,12 @@ const ProfileTabs = ({ userInfo, role }) => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Pet Owner Profile</h1>
             <p className="mt-2 text-gray-600">
-              {profile?.petOwnerProfile 
-                ? "Manage your profile and pets" 
+              {profile?.petOwnerProfile
+                ? "Manage your profile and pets"
                 : "Complete your profile to get started"}
             </p>
           </div>
-          
+
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
@@ -130,7 +130,7 @@ const ProfileTabs = ({ userInfo, role }) => {
               </p>
             </div>
 
-            <form 
+            <form
               onSubmit={profile?.petOwnerProfile ? updateHandler : createHandler}
               className="p-8"
             >
@@ -141,7 +141,7 @@ const ProfileTabs = ({ userInfo, role }) => {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
                       Personal Information
                     </h3>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -293,7 +293,7 @@ const ProfileTabs = ({ userInfo, role }) => {
                   <h3 className="text-xl font-semibold text-gray-900 mb-6 pb-2 border-b border-gray-200">
                     Profile Details
                   </h3>
-                  
+
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="bg-gray-50 rounded-xl p-5">
@@ -398,19 +398,18 @@ const ProfileTabs = ({ userInfo, role }) => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Profile Status</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      profile?.petOwnerProfile 
-                        ? 'bg-green-100 text-green-800' 
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${profile?.petOwnerProfile
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                      }`}>
                       {profile?.petOwnerProfile ? 'Complete' : 'Incomplete'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Member Since</span>
                     <span className="font-medium text-gray-900">
-                      {profile?.createdAt 
-                        ? new Date(profile.createdAt).toLocaleDateString() 
+                      {profile?.createdAt
+                        ? new Date(profile.createdAt).toLocaleDateString()
                         : '—'}
                     </span>
                   </div>
@@ -421,21 +420,34 @@ const ProfileTabs = ({ userInfo, role }) => {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                  {/* Book Appointment */}
+                  <button
+                    onClick={() => (window.location.href = "/petowner/vets")}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                  >
                     <span className="text-gray-700 group-hover:text-navigray">Book Appointment</span>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-navigray"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+
+                  {/* View Appointments */}
+                  <button
+                    onClick={() => (window.location.href = "/petowner/owner-appointments")}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                  >
                     <span className="text-gray-700 group-hover:text-navigray">View Appointments</span>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group">
-                    <span className="text-gray-700 group-hover:text-navigray">Add New Pet</span>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-navigray"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>

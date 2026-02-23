@@ -94,7 +94,7 @@ export default function useAgora(channelName, uid, reconnectKey = 0) {
 
         await newClient.publish([micTrack, camTrack]);
       } catch (err) {
-        console.error("❌ Agora error:", err);
+        console.error(" Agora error:", err);
       }
     }
 

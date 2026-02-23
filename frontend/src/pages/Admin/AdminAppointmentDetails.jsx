@@ -5,115 +5,15 @@ import Loader from "../../components/Loader";
 import Message from "../../components/Message";
 import {
   useGetAppointmentDetailsQuery,
-  useOwnerResponseMutation,
-  useMarkAppointmentPaidMutation,
 } from "../../redux/api/appointmentApiSlice";
-import { useSelector } from "react-redux";
-import { toast } from "react-toastify";
 import moment from "moment";
-import OwnerActions from "./OwnerActions";
-import { useAddDoctorReviewMutation } from "../../redux/api/userApiSlice";
 
-const PetOwnerResponse = () => {
+const AdminAppointmentDetails = () => {
   const { id } = useParams();
   const { data, isLoading, error, refetch } = useGetAppointmentDetailsQuery(id);
   
   // ✅ Safely extract appointment object
   const appointment = data?.appointment || data?.data?.appointment || null;
-  
-  // Mutations
-  const [ownerResponse] = useOwnerResponseMutation();
-  const [markPaid] = useMarkAppointmentPaidMutation();
-  const [addDoctorReview] = useAddDoctorReviewMutation();
-
-  // Review state
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [hoverRating, setHoverRating] = useState(0);
-
-  const currentUserId = useSelector((state) => state.auth.userInfo?._id);
-  const currentUserRole = useSelector((state) => state.auth.userInfo?.role);
-
-  // Role check
-  const isOwner = appointment?.ownerId?._id && currentUserId
-    ? appointment.ownerId._id.toString() === currentUserId.toString()
-    : false;
-
-  // Check if user has already reviewed this doctor
-  const hasAlreadyReviewed = appointment?.doctorId?.reviews?.some(
-    review => review.user?.toString() === currentUserId?.toString()
-  );
-
-  // Check if can review (appointment completed and not already reviewed)
-  const canReview = appointment?.status === "Completed" && 
-                    !hasAlreadyReviewed && 
-                    isOwner;
-
-  // Handle review submission
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
-    
-    if (!reviewComment.trim()) {
-      toast.error("Please enter a review comment");
-      return;
-    }
-
-    setIsSubmittingReview(true);
-
-    try {
-      const reviewData = {
-        rating: reviewRating,
-        comment: reviewComment.trim()
-      };
-
-      const response = await addDoctorReview({
-        id: appointment._id,
-        data: reviewData
-      }).unwrap();
-
-      toast.success("Review submitted successfully!");
-      setShowReviewForm(false);
-      setReviewRating(5);
-      setReviewComment("");
-      refetch();
-    } catch (error) {
-      toast.error(error?.data?.error || error?.data?.message || "Failed to submit review");
-      console.error("Review error:", error);
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
-
-  // Star rating component
-  const StarRating = ({ rating, onRatingChange, hoverRating, onHoverChange, readOnly = false }) => {
-    const stars = [1, 2, 3, 4, 5];
-    
-    return (
-      <div className="flex items-center space-x-1">
-        {stars.map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => !readOnly && onRatingChange(star)}
-            onMouseEnter={() => !readOnly && onHoverChange(star)}
-            onMouseLeave={() => !readOnly && onHoverChange(0)}
-            disabled={readOnly}
-            className={`text-2xl transition-transform hover:scale-110 ${
-              readOnly ? "cursor-default" : "cursor-pointer"
-            }`}
-          >
-            {star <= (hoverRating || rating) ? (
-              <span className="text-yellow-500">★</span>
-            ) : (
-              <span className="text-gray-300">☆</span>
-            )}
-          </button>
-        ))}
-      </div>
-    );
-  };
 
   if (isLoading) return <Loader />;
   if (error) {
@@ -320,19 +220,6 @@ const PetOwnerResponse = () => {
 
               {/* Right Column - Actions & Participants */}
               <div className="space-y-8">
-                {/* Owner Actions */}
-                {isOwner && appointment.status !== "Completed" && appointment.status !== "Cancelled" && (
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <OwnerActions
-                      appointment={appointment}
-                      appointmentId={id}
-                      ownerResponse={ownerResponse}
-                      markPaid={markPaid}
-                      refetch={refetch}
-                    />
-                  </div>
-                )}
-
                 {/* Doctor Information Card */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
@@ -353,112 +240,29 @@ const PetOwnerResponse = () => {
                       <div>
                         <p className="text-sm text-gray-600 mb-2">Rating</p>
                         <div className="flex items-center">
-                          <StarRating 
-                            rating={appointment.doctorId.rating} 
-                            readOnly={true}
-                            onRatingChange={() => {}}
-                            onHoverChange={() => {}}
-                          />
-                          <span className="ml-2 text-gray-700 font-medium">
+                          <div className="flex items-center space-x-1 mr-2">
+                            {[...Array(5)].map((_, i) => (
+                              <span
+                                key={i}
+                                className={`text-2xl ${
+                                  i < Math.floor(appointment.doctorId.rating)
+                                    ? "text-yellow-500"
+                                    : i < appointment.doctorId.rating
+                                    ? "text-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                          <span className="text-gray-700 font-medium">
                             {appointment.doctorId.rating.toFixed(1)} 
                             <span className="text-gray-500 text-sm ml-1">
                               ({appointment.doctorId.numReviews || 0} reviews)
                             </span>
                           </span>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Review Button (Only for completed appointments) */}
-                    {canReview && (
-                      <div className="pt-4 border-t border-gray-200">
-                        {!showReviewForm ? (
-                          <button
-                            onClick={() => setShowReviewForm(true)}
-                            className="w-full px-4 py-3 bg-navigray hover:bg-navigray-dark text-white rounded-lg font-medium transition-colors flex items-center justify-center"
-                          >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                            </svg>
-                            Rate & Review This Doctor
-                          </button>
-                        ) : (
-                          <div className="bg-white rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-medium text-gray-900 mb-3">Write a Review</h5>
-                            <form onSubmit={handleSubmitReview}>
-                              {/* Star Rating */}
-                              <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Your Rating
-                                </label>
-                                <StarRating
-                                  rating={reviewRating}
-                                  onRatingChange={setReviewRating}
-                                  hoverRating={hoverRating}
-                                  onHoverChange={setHoverRating}
-                                />
-                                <div className="mt-1 text-sm text-gray-500">
-                                  {reviewRating} star{reviewRating !== 1 ? 's' : ''}
-                                </div>
-                              </div>
-
-                              {/* Comment */}
-                              <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Your Review
-                                </label>
-                                <textarea
-                                  value={reviewComment}
-                                  onChange={(e) => setReviewComment(e.target.value)}
-                                  placeholder="Share your experience with this doctor..."
-                                  rows="4"
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
-                                  required
-                                />
-                              </div>
-
-                              {/* Actions */}
-                              <div className="flex gap-2">
-                                <button
-                                  type="submit"
-                                  disabled={isSubmittingReview}
-                                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                                >
-                                  {isSubmittingReview ? (
-                                    <>
-                                      <Loader small />
-                                      <span className="ml-2">Submitting...</span>
-                                    </>
-                                  ) : (
-                                    'Submit Review'
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setShowReviewForm(false);
-                                    setReviewComment("");
-                                    setReviewRating(5);
-                                  }}
-                                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </form>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {hasAlreadyReviewed && (
-                      <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                        <p className="text-sm text-green-700 flex items-center">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          You have already reviewed this doctor
-                        </p>
                       </div>
                     )}
 
@@ -480,14 +284,14 @@ const PetOwnerResponse = () => {
                     <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    Your Information
+                    Owner Information
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <p className="text-sm text-gray-600">Name</p>
                       <p className="font-medium text-lg">{appointment.ownerId?.fullName || "—"}</p>
                     </div>
-                    {appointment.status === "Completed" && appointment.ownerId?.phone && (
+                    {appointment.ownerId?.phone && (
                       <div>
                         <p className="text-sm text-gray-600">Contact</p>
                         <p className="font-medium">{appointment.ownerId.phone}</p>
@@ -524,4 +328,4 @@ const PetOwnerResponse = () => {
   );
 };
 
-export default PetOwnerResponse;
+export default AdminAppointmentDetails;

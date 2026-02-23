@@ -38,6 +38,10 @@ import AuthVerification from "./pages/Auth/AuthVarification.jsx";
 import ResendVerification from "./pages/Auth/ResendVarificationEmail.jsx";
 import { EmailVerifier } from "./components/EmailVerifier.jsx";
 import ResetPassword from "./pages/Auth/ResetPassword.jsx";
+import AdminAppointmentDetails from "./pages/Admin/AdminAppointmentDetails.jsx";
+import DoctorDashboard from "./pages/Appointments/DoctorDashBoard.jsx";
+import AdminDashboard from "./pages/Admin/AdminDashBoard.jsx";
+import Home from "./pages/Home.jsx";
 
 
 const router = createBrowserRouter(
@@ -48,6 +52,7 @@ const router = createBrowserRouter(
       <Route path="/verify-email" element={<AuthVerification />}/>
       <Route path="/resend-email" element={<ResendVerification />}/>
       <Route path="/reset-password/:token" element={<ResetPassword/>}/>
+      <Route index={true}  path="/" element={<Home/>}/>
       <Route  path=":id" element={<UserDetails/>}/>
 
       <Route  path="" element={<PrivateRouter/>}>  
@@ -69,11 +74,14 @@ const router = createBrowserRouter(
           <Route  path="doctor-appointments" element={<DoctorAppointments/>}/>
           <Route  path=":id/doctor-response" element={<DoctorResponse/>}/>
           <Route  path=":appointmentId/complete" element={<CompleteAppointment/>}/>
+          <Route  path="dashboard" element={<DoctorDashboard/>}/>
       </Route>
       <Route  path="admin" element={<AdminRoute/>}>
           <Route  path="userslist" element={<UserList/>}/>
           <Route  path="allpets" element={<AllPets/>}/>
           <Route  path="allappointments" element={<AdminAllAppointments/>}/>
+          <Route  path=":id/appointment-details" element={<AdminAppointmentDetails/>}/>
+          <Route  path="dashboard" element={<AdminDashboard/>}/>
       </Route>
       </Route>
       </Route>

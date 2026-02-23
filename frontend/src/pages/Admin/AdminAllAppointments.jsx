@@ -17,9 +17,12 @@ import {
   FaBell,
   FaSearch,
   FaFilter,
-  FaTimes
+  FaTimes,
+  FaSortAmountDown,
+  FaSortAmountUp,
+  FaExclamationTriangle
 } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const AdminAllAppointments = () => {
   const { data, isLoading, isError } = useGetAppointmentsQuery();
@@ -27,28 +30,79 @@ const AdminAllAppointments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("urgent");
 
   const appointments = data?.appointments || [];
 
-  // Filter appointments
-  const filteredAppointments = appointments.filter(appt => {
-    const matchesSearch = 
-      appt.petId?.petName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appt.petId?.petType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appt.doctorId?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appt.ownerId?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appt._id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || appt.status === statusFilter;
-    const matchesType = typeFilter === "all" || appt.appointmentType === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Get unique statuses for filter dropdown
+  const statuses = useMemo(() => {
+    const statusSet = new Set(appointments.map(app => app.status));
+    return ["all", ...Array.from(statusSet)];
+  }, [appointments]);
 
-  // Sort by date (newest first)
-  const sortedAppointments = [...filteredAppointments].sort((a, b) => {
-    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-  });
+  // Filter and sort appointments
+  const filteredAndSortedAppointments = useMemo(() => {
+    let filtered = [...appointments];
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(appt => 
+        appt.petId?.petName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt.petId?.petType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt.doctorId?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt.ownerId?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt._id?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(appt => appt.status === statusFilter);
+    }
+    
+    // Apply type filter
+    if (typeFilter !== "all") {
+      filtered = filtered.filter(appt => appt.appointmentType === typeFilter);
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      const dateA = moment(a.appointmentDate);
+      const dateB = moment(b.appointmentDate);
+      const now = moment();
+      
+      switch (sortOrder) {
+        case "urgent":
+         // For urgent: Show active appointments first, then completed/cancelled at the bottom
+         const aIsActive = !["Completed", "Cancelled"].includes(a.status);
+         const bIsActive = !["Completed", "Cancelled"].includes(b.status);
+         
+         if (aIsActive && !bIsActive) return -1;
+         if (!aIsActive && bIsActive) return 1;
+         
+         // If both are active, sort by closest date
+         if (aIsActive && bIsActive) {
+           const diffA = Math.abs(dateA.diff(now));
+           const diffB = Math.abs(dateB.diff(now));
+           return diffA - diffB;
+         }
+         
+         // If both are completed/cancelled, sort by newest first
+         return dateB - dateA;
+         
+        case "oldest":
+         return dateA - dateB;
+         
+        case "newest":
+         return dateB - dateA;
+         
+        default:
+         return 0;
+      }
+    });
+    
+    return filtered;
+  }, [appointments, searchTerm, statusFilter, typeFilter, sortOrder]);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -72,7 +126,35 @@ const AdminAllAppointments = () => {
     }
   };
 
-  const formatTime = (timeString) => {
+  const getUrgencyBadge = (appointmentDate, status) => {
+    // Don't show urgency badges for completed or cancelled appointments
+    if (status === "Completed" || status === "Cancelled") {
+      return null;
+    }
+    
+    const today = moment().startOf('day');
+    const appDate = moment(appointmentDate).startOf('day');
+    const diffDays = appDate.diff(today, 'days');
+    
+    if (diffDays < 0) {
+      return (
+        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full flex items-center">
+          <FaExclamationTriangle className="w-3 h-3 mr-1" />
+          Overdue
+        </span>
+      );
+    } else if (diffDays === 0) {
+      return <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">Today</span>;
+    } else if (diffDays === 1) {
+      return <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Tomorrow</span>;
+    } else if (diffDays <= 3) {
+      return <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">This week</span>;
+    }
+    return null;
+  };
+
+  const formatLocalTime = (timeString) => {
+    if (!timeString) return "";
     return moment(`1970-01-01T${timeString}`).format("hh:mm A");
   };
 
@@ -120,15 +202,20 @@ const AdminAllAppointments = () => {
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">All Appointments</h1>
                   <p className="text-gray-600 mt-2">
-                    Manage all system appointments ({sortedAppointments.length} of {appointments.length} shown)
+                    Total: <span className="font-semibold">{filteredAndSortedAppointments.length} appointments</span>
+                    {appointments.length !== filteredAndSortedAppointments.length && (
+                      <span className="text-sm text-gray-500 ml-2">
+                        (filtered from {appointments.length})
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
 
               {/* Filters and Search */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Search */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaSearch className="text-gray-400" />
                   </div>
@@ -150,7 +237,7 @@ const AdminAllAppointments = () => {
                 </div>
 
                 {/* Status Filter */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaFilter className="text-gray-400" />
                   </div>
@@ -159,31 +246,54 @@ const AdminAllAppointments = () => {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray appearance-none"
                   >
-                    <option value="all">All Statuses</option>
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Accepted">Accepted</option>
-                    <option value="Rescheduled">Rescheduled</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
+                    {statuses.map(status => (
+                      <option key={status} value={status}>
+                        {status === "all" ? "All Statuses" : status}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 {/* Type Filter */}
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
-                >
-                  <option value="all">All Types</option>
-                  <option value="Clinic Visit">Clinic Visit</option>
-                  <option value="Video Call">Video Call</option>
-                  <option value="Home Visit">Home Visit</option>
-                </select>
+                <div className="relative md:col-span-1">
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="On Clinic">Clinic Visit</option>
+                    <option value="Video Call">Video Call</option>
+                    <option value="Home Visit">Home Visit</option>
+                  </select>
+                </div>
+
+                {/* Sort Order */}
+                <div className="relative md:col-span-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    {sortOrder === "urgent" ? (
+                      <FaExclamationTriangle className="text-orange-400" />
+                    ) : sortOrder === "newest" ? (
+                      <FaSortAmountDown className="text-gray-400" />
+                    ) : (
+                      <FaSortAmountUp className="text-gray-400" />
+                    )}
+                  </div>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray appearance-none"
+                  >
+                    <option value="urgent">Urgent First</option>
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Appointment Cards */}
-            {sortedAppointments.length === 0 ? (
+            {filteredAndSortedAppointments.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <FaCalendar className="w-10 h-10 text-gray-400" />
@@ -194,21 +304,43 @@ const AdminAllAppointments = () => {
                     ? "Try adjusting your search or filters" 
                     : "No appointments have been scheduled yet"}
                 </p>
+                {(searchTerm || statusFilter !== "all" || typeFilter !== "all") && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                      setTypeFilter("all");
+                    }}
+                    className="mt-4 text-navigray hover:text-navigray-dark font-medium"
+                  >
+                    Clear all filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {sortedAppointments.map((appt) => (
+                {filteredAndSortedAppointments.map((appt) => (
                   <div key={appt._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                    {/* Header with Status */}
+                    {/* Header with Status and Date */}
                     <div className={`px-6 py-4 border-b ${getStatusColor(appt.status).split(' ')[0]}`}>
                       <div className="flex items-center justify-between">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(appt.status)}`}>
-                          <span className="mr-1">{getStatusIcon(appt.status)}</span>
-                          {appt.status}
-                        </span>
-                        <span className="text-sm text-gray-600">
-                          {moment(appt.appointmentDate).format("MMM D, YYYY")}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(appt.status)}`}>
+                            <span className="mr-1">{getStatusIcon(appt.status)}</span>
+                            {appt.status}
+                          </span>
+                          {getUrgencyBadge(appt.appointmentDate, appt.status)}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600">
+                            {moment(appt.appointmentDate).format("MMM D, YYYY")}
+                          </span>
+                          {appt.status !== "Completed" && appt.status !== "Cancelled" && (
+                            <span className="text-xs text-gray-400">
+                              ({moment(appt.appointmentDate).fromNow()})
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -224,21 +356,46 @@ const AdminAllAppointments = () => {
                           />
                         </div>
 
-                        {/* Pet Info */}
+                        {/* Pet & Appointment Info */}
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900">
                             {appt.petId?.petName || appt.petId?.petType || "Pet"}
                           </h3>
-                          <div className="mt-2 space-y-2">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <FaClock className="w-4 h-4 mr-2 text-gray-400" />
-                              <span>{formatTime(appt.appointmentTime)} • {appt.appointmentType}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <FaMoneyBill className="w-4 h-4 mr-2 text-gray-400" />
-                              <span>{appt.charges} PKR • {appt.isPaid ? "Paid ✓" : "Pending"}</span>
-                            </div>
+                          
+                          {/* Appointment Date - Full Format */}
+                          <div className="mt-1 flex items-center text-sm font-medium text-navigray">
+                            <FaCalendar className="w-4 h-4 mr-1" />
+                            {moment(appt.appointmentDate).format("dddd, MMMM Do YYYY")}
                           </div>
+                          
+                          {/* Time & Type */}
+                          <div className="mt-1 flex items-center text-sm text-gray-700">
+                            <FaClock className="w-4 h-4 mr-1 text-gray-500" />
+                            {formatLocalTime(appt.appointmentTime)} • {appt.appointmentType}
+                          </div>
+                          
+                          {/* Payment */}
+                          <div className="mt-2 flex items-center text-sm text-gray-600">
+                            <FaMoneyBill className="w-4 h-4 mr-2 text-gray-400" />
+                            <span>
+                              <span className="font-medium">{appt.charges} PKR</span>
+                              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                                appt.isPaid 
+                                  ? "bg-green-100 text-green-700" 
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}>
+                                {appt.isPaid ? "Paid ✓" : "Pending"}
+                              </span>
+                            </span>
+                          </div>
+
+                          {/* Show completed/cancelled date for past appointments */}
+                          {(appt.status === "Completed" || appt.status === "Cancelled") && appt.updatedAt && (
+                            <div className="mt-2 flex items-center text-xs text-gray-500">
+                              <FaClock className="w-3 h-3 mr-1" />
+                              {appt.status === "Completed" ? "Completed" : "Cancelled"} on {moment(appt.updatedAt).format("MMM D, YYYY")}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -252,6 +409,11 @@ const AdminAllAppointments = () => {
                           <div className="font-medium text-gray-900 truncate">
                             {appt.doctorId?.fullName || "Unassigned"}
                           </div>
+                          {appt.doctorId?.specialization && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {appt.doctorId.specialization}
+                            </div>
+                          )}
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center text-sm text-gray-600 mb-1">
@@ -261,13 +423,18 @@ const AdminAllAppointments = () => {
                           <div className="font-medium text-gray-900 truncate">
                             {appt.ownerId?.fullName || "Unknown"}
                           </div>
+                          {appt.ownerId?.phone && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {appt.ownerId.phone}
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                         <Link
-                          to={`/admin/appointment/${appt._id}`}
+                          to={`/admin/${appt._id}/appointment-details`}
                           className="flex-1 min-w-[120px] px-4 py-2 bg-navigray text-white rounded-lg hover:bg-navigray-dark transition-colors flex items-center justify-center"
                         >
                           <FaEye className="mr-2" />
@@ -276,13 +443,6 @@ const AdminAllAppointments = () => {
                         
                         {appt.status !== "Completed" && appt.status !== "Cancelled" && (
                           <>
-                            <Link
-                              to={`/admin/appointment/${appt._id}/edit`}
-                              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center"
-                            >
-                              <FaEdit className="mr-2" />
-                              Edit
-                            </Link>
                             <button
                               onClick={() => {
                                 // Implement resend notification logic
@@ -303,7 +463,7 @@ const AdminAllAppointments = () => {
             )}
 
             {/* Stats Summary */}
-            {sortedAppointments.length > 0 && (
+            {filteredAndSortedAppointments.length > 0 && (
               <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                   <div className="flex items-center">
@@ -348,9 +508,12 @@ const AdminAllAppointments = () => {
                       <FaClock className="w-5 h-5 text-yellow-600" />
                     </div>
                     <div>
-                      <div className="text-sm text-gray-600">Upcoming</div>
+                      <div className="text-sm text-gray-600">Overdue</div>
                       <div className="text-xl font-semibold">
-                        {appointments.filter(a => ["Scheduled", "Accepted"].includes(a.status)).length}
+                        {appointments.filter(a => 
+                          moment(a.appointmentDate).isBefore(moment(), 'day') &&
+                          !["Completed", "Cancelled"].includes(a.status)
+                        ).length}
                       </div>
                     </div>
                   </div>
@@ -370,8 +533,37 @@ const AdminAllAppointments = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Today's</span>
                   <span className="font-semibold">
-                    {appointments.filter(a => moment(a.appointmentDate).isSame(moment(), 'day')).length}
+                    {appointments.filter(a => 
+                      moment(a.appointmentDate).isSame(moment(), 'day') &&
+                      !["Completed", "Cancelled"].includes(a.status)
+                    ).length}
                   </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Tomorrow</span>
+                  <span className="font-semibold">
+                    {appointments.filter(a => 
+                      moment(a.appointmentDate).isSame(moment().add(1, 'day'), 'day') &&
+                      !["Completed", "Cancelled"].includes(a.status)
+                    ).length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-red-600">Overdue</span>
+                  <span className="font-semibold">
+                    {appointments.filter(a => 
+                      moment(a.appointmentDate).isBefore(moment(), 'day') &&
+                      !["Completed", "Cancelled"].includes(a.status)
+                    ).length}
+                  </span>
+                </div>
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-purple-600">Pending Action</span>
+                    <span className="font-semibold">
+                      {appointments.filter(a => a.status === "Scheduled").length}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-red-600">Cancelled</span>
@@ -385,17 +577,25 @@ const AdminAllAppointments = () => {
                     {appointments.filter(a => a.status === "Rescheduled").length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-blue-600">Video Calls</span>
-                  <span className="font-semibold">
-                    {appointments.filter(a => a.appointmentType === "Video Call").length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Clinic Visits</span>
-                  <span className="font-semibold">
-                    {appointments.filter(a => a.appointmentType === "Clinic Visit").length}
-                  </span>
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-600">Video Calls</span>
+                    <span className="font-semibold">
+                      {appointments.filter(a => a.appointmentType === "Video Call").length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm text-gray-600">Clinic Visits</span>
+                    <span className="font-semibold">
+                      {appointments.filter(a => a.appointmentType === "On Clinic").length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm text-gray-600">Home Visits</span>
+                    <span className="font-semibold">
+                      {appointments.filter(a => a.appointmentType === "Home Visit").length}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -428,12 +628,12 @@ const AdminAllAppointments = () => {
               </div>
             </div>
 
-            {/* Recent Activity */}
-            {sortedAppointments.length > 0 && (
+            {/* Recent Activity - FIXED */}
+            {filteredAndSortedAppointments.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-6">
                 <h3 className="font-semibold text-gray-900 mb-4">Recent Activity</h3>
                 <div className="space-y-4">
-                  {sortedAppointments.slice(0, 3).map((appt) => (
+                  {filteredAndSortedAppointments.slice(0, 3).map((appt) => (
                     <div key={appt._id} className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
                         <FaPaw className="w-5 h-5 text-gray-500" />
@@ -446,9 +646,10 @@ const AdminAllAppointments = () => {
                           <span className={`inline-block w-2 h-2 rounded-full mr-1 ${
                             appt.status === "Completed" ? "bg-green-400" :
                             appt.status === "Cancelled" ? "bg-red-400" :
+                            appt.status === "Scheduled" ? "bg-purple-400" :
                             "bg-blue-400"
                           }`}></span>
-                          {appt.status} • {moment(appt.createdAt).fromNow()}
+                          {appt.status} • {moment(appt.updatedAt || appt.createdAt).fromNow()}
                         </div>
                       </div>
                     </div>

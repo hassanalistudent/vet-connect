@@ -46,7 +46,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // ➕ Create doctor/pet owner profile
     createProfile: builder.mutation({
       query: (data) => ({
         url: `${USERS_URL}/profile`,
@@ -55,7 +54,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // 👥 Get all users (Admin only)
     getUsers: builder.query({
       query: () => ({
         url: `${USERS_URL}`,
@@ -64,7 +62,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       keepUnusedDataFor: 5,
     }),
 
-    // ❌ Delete user (Admin only)
     deleteUser: builder.mutation({
       query: (userId) => ({
         url: `${USERS_URL}/${userId}`,
@@ -72,7 +69,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // 🔍 Get user details by ID (Admin only)
     getUserDetails: builder.query({
       query: (id) => ({
         url: `${USERS_URL}/${id}`,
@@ -80,7 +76,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       keepUnusedDataFor: 5,
     }),
 
-    // ✏️ Update user by ID (Admin only)
     updateUser: builder.mutation({
       query: (data) => ({
         url: `${USERS_URL}/${data.userId}`,
@@ -90,7 +85,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["User"],
     }),
 
-    // 👨‍⚕️ Get doctors
     getDoctors: builder.query({
       query: () => ({
         url: `${USERS_URL}/doctors`,
@@ -100,7 +94,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       keepUnusedDataFor: 5,
     }),
 
-    // 📧 Verify email
+    
     verifyEmail: builder.query({
       query: ({ token, email }) => ({
         url: `${USERS_URL}/verify-email?token=${token}&email=${email}`,
@@ -108,7 +102,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // 🔄 Resend verification email
+    
     resendVerification: builder.mutation({
       query: (email) => ({
         url: `${USERS_URL}/resend-verification`,
@@ -117,7 +111,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // 🔑 Forgot password
+  
     forgotPassword: builder.mutation({
       query: (email) => ({
         url: `${USERS_URL}/forgot-password`,
@@ -126,7 +120,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // 🔑 Reset password
     resetPassword: builder.mutation({
       query: ({ token, password }) => ({
         url: `${USERS_URL}/reset-password/${token}`,
@@ -134,13 +127,20 @@ export const userApiSlice = apiSlice.injectEndpoints({
         body: { password },
       }),
     }),
-    //check verified or not 
+
     checkVerified: builder.query({
       query: () => ({
         url: `${USERS_URL}/verify`,
-        method: 'GET',
-        credentials: 'include', // Sends cookies if using httpOnly
-        // OR prepareHeaders for Bearer token
+        method: "GET",
+        credentials: "include",
+      }),
+    }),
+
+    addDoctorReview: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `${USERS_URL}/${id}/add-doctor-review`,
+        method: "POST",
+        body: data, // { rating, comment }
       }),
     }),
   }),
@@ -162,5 +162,6 @@ export const {
   useResendVerificationMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
-  useCheckVerifiedQuery
+  useCheckVerifiedQuery,
+  useAddDoctorReviewMutation, 
 } = userApiSlice;

@@ -9,11 +9,12 @@ import {
 } from "../../redux/api/userApiSlice";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import moment from "moment"; // Add moment for date formatting
 
 const UserDetails = () => {
   // ALL HOOKS AT TOP
   const { id } = useParams();
-  const { data: user, isLoading, error } = useGetUserDetailsQuery(id);
+  const { data: user, isLoading, error, refetch } = useGetUserDetailsQuery(id);
   const [updateUser, { isLoading: updatingStatus }] = useUpdateUserMutation();
   const { userInfo } = useSelector((state) => state.auth);
   const isAdmin = userInfo?.role === "Admin";
@@ -44,6 +45,7 @@ const UserDetails = () => {
     try {
       await updateUser({ userId: user._id, status: tempStatus }).unwrap();
       toast.success(`Doctor status updated to ${tempStatus} successfully!`);
+      refetch(); // Refetch to get updated data
     } catch (err) {
       toast.error(err?.data?.message || "Failed to update doctor status");
     }
@@ -81,6 +83,57 @@ const UserDetails = () => {
         </svg>
         Pending
       </span>
+    );
+  };
+
+  // Star Rating Component
+  const StarRating = ({ rating }) => {
+    const stars = [1, 2, 3, 4, 5];
+    
+    return (
+      <div className="flex items-center space-x-1">
+        {stars.map((star) => (
+          <span key={star} className="text-lg">
+            {star <= rating ? (
+              <span className="text-yellow-500">★</span>
+            ) : (
+              <span className="text-gray-300">☆</span>
+            )}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // Reviews Section Component
+  const ReviewsSection = ({ reviews, doctorId, doctorName }) => {
+    if (!reviews || reviews.length === 0) {
+      return (
+        <div className="text-center py-6">
+          <p className="text-gray-500">No reviews yet for this doctor</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+          {reviews.map((review, index) => (
+            <div key={review._id || index} className="bg-white rounded-lg p-4 border border-gray-100">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="font-medium text-gray-900">{review.name}</p>
+                  <StarRating rating={review.rating} />
+                </div>
+                <span className="text-xs text-gray-500">
+                  {moment(review.createdAt).fromNow()}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 mt-2">{review.comment}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   };
 
@@ -170,6 +223,19 @@ const UserDetails = () => {
                       )}
                     </div>
                     
+                    {/* Doctor Rating Display */}
+                    {isDoctor && doctor?.rating > 0 && (
+                      <div className="mt-3 flex items-center justify-center md:justify-start bg-white/20 rounded-lg px-4 py-2 inline-flex">
+                        <StarRating rating={doctor.rating} />
+                        <span className="ml-2 text-white font-medium">
+                          {doctor.rating.toFixed(1)} 
+                          <span className="text-white/80 ml-1">
+                            ({doctor.numReviews || 0} {doctor.numReviews === 1 ? 'review' : 'reviews'})
+                          </span>
+                        </span>
+                      </div>
+                    )}
+
                     {isDoctor && doctor?.degreeName && (
                       <p className="mt-4 text-white/80 text-lg">
                         {doctor.degreeName}
@@ -413,6 +479,27 @@ const UserDetails = () => {
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Reviews Section - Added Here */}
+                    {doctor?.reviews && doctor.reviews.length > 0 && (
+                      <div className="bg-gray-50 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                          <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                          Patient Reviews
+                          <span className="ml-3 text-sm font-normal text-gray-600">
+                            ({doctor.numReviews || 0} total)
+                          </span>
+                        </h3>
+                        
+                        <ReviewsSection 
+                          reviews={doctor.reviews} 
+                          doctorId={doctor._id}
+                          doctorName={user.fullName}
+                        />
                       </div>
                     )}
 

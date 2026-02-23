@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import Loader from "../../components/Loader";
 import Message from "../../components/Message";
 import {
@@ -8,15 +8,22 @@ import {
 import {
   useCreateAppointmentMutation,
 } from "../../redux/api/appointmentApiSlice";
+import { useGetProfileQuery, useGetUserDetailsQuery } from "../../redux/api/userApiSlice";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
 const CreateAppointment = () => {
-  const { doctorId } = useParams();
+  const { doctorId } = useParams(); // This is the doctor's USER ID
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
 
+  // Get current user's profile to check completion status
+  const { data: userProfile, isLoading: profileLoading } = useGetProfileQuery();
   const { data: pets = [], isLoading: petsLoading, error: petsError } = useGetUserPetsQuery();
+  
+  // Get doctor's user details - this returns the user object (which may have doctor profile populated)
+  const { data: doctorUser, isLoading: doctorLoading, error: doctorError } = useGetUserDetailsQuery(doctorId);
+  
   const [createAppointment, { isLoading: creating }] = useCreateAppointmentMutation();
 
   const [formData, setFormData] = useState({
@@ -27,6 +34,34 @@ const CreateAppointment = () => {
     appointmentType: "",
   });
 
+  // Check if profile is complete
+  const isProfileComplete = userProfile;
+
+  // Extract doctor profile from user object (assuming it's populated)
+  const doctorProfile = doctorUser?.doctorProfile || doctorUser?.profile || {};
+
+  // Get available appointment types based on doctor's services
+  const getAvailableAppointmentTypes = () => {
+    if (!doctorProfile) return [];
+    
+    const types = [];
+    if (doctorProfile.servicesOffered?.videoConsultation) {
+      types.push({ value: "Video Call", label: "Video Call" });
+    }
+    if (doctorProfile.servicesOffered?.clinicConsultation) {
+      types.push({ value: "On Clinic", label: "Clinic Visit" });
+    }
+    if (doctorProfile.servicesOffered?.homeVisit) {
+      types.push({ value: "Home Visit", label: "Home Visit" });
+    }
+    return types;
+  };
+
+  const availableTypes = getAvailableAppointmentTypes();
+
+  // Get doctor's name from user object
+  const doctorName = doctorUser?.fullName || doctorUser?.username || "the veterinarian";
+
   const handlePetChange = (e) => {
     setFormData((prev) => ({ ...prev, petId: e.target.value }));
   };
@@ -34,6 +69,13 @@ const CreateAppointment = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Double-check profile completion before submission
+    if (!isProfileComplete) {
+      toast.error("Please complete your profile first");
+      navigate("/petowner/profile");
+      return;
+    }
+
     if (!formData.petId || !formData.appointmentDate || !formData.appointmentTime || !formData.appointmentType) {
       toast.error("Please fill all required fields");
       return;
@@ -56,8 +98,143 @@ const CreateAppointment = () => {
     }
   };
 
-  if (petsLoading) return <Loader />;
+  // Show loader while profile or doctor data is loading
+  if (profileLoading || petsLoading || doctorLoading) return <Loader />;
+  
+  // Show error if pets loading failed
   if (petsError) return <Message variant="danger">Error loading pets</Message>;
+  
+  // Show error if doctor loading failed
+  if (doctorError) return <Message variant="danger">Error loading doctor information</Message>;
+
+  // If doctor doesn't offer any services
+  if (availableTypes.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="px-8 py-6 bg-orange-50 border-b border-orange-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mr-4">
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-orange-800">Services Not Available</h2>
+                  <p className="text-orange-700">This doctor hasn't added any services yet</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 text-center">
+              <div className="mb-8">
+                <div className="w-32 h-32 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <span className="text-4xl">🩺</span>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No Services Available
+                </h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  The doctor you're trying to book hasn't configured their services yet. 
+                  Please try another doctor or contact support.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  to="/doctors"
+                  className="px-8 py-4 bg-navigray hover:bg-navigray-dark text-white rounded-xl font-semibold transition-colors"
+                >
+                  Browse Other Doctors
+                </Link>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="px-8 py-4 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If profile is incomplete, show warning and redirect option
+  if (!isProfileComplete) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="px-8 py-6 bg-yellow-50 border-b border-yellow-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-yellow-800">Profile Incomplete</h2>
+                  <p className="text-yellow-700">Please complete your profile before booking an appointment</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 text-center">
+              <div className="mb-8">
+                <div className="w-32 h-32 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Why Complete Your Profile?
+                </h3>
+                <div className="space-y-2 text-gray-600 max-w-md mx-auto">
+                  <p className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Faster appointment booking
+                  </p>
+                  <p className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Better communication with veterinarians
+                  </p>
+                  <p className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Access to medical records
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  to="/petowner/profile"
+                  className="px-8 py-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl font-semibold transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Complete Profile Now
+                </Link>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="px-8 py-4 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -67,7 +244,7 @@ const CreateAppointment = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Book Appointment</h1>
             <p className="mt-2 text-gray-600">
-              Schedule a visit for your pet with the veterinarian
+              Schedule a visit for your pet with {doctorName}
             </p>
           </div>
           
@@ -82,6 +259,109 @@ const CreateAppointment = () => {
             Back
           </button>
         </div>
+
+        {/* Doctor Info Card */}
+        {doctorUser && (
+          <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center">
+              {doctorProfile.image ? (
+                <img 
+                  src={doctorProfile.image} 
+                  alt={doctorName} 
+                  className="w-16 h-16 rounded-full object-cover border-2 border-navigray mr-4"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-navigray/10 flex items-center justify-center mr-4">
+                  <svg className="w-8 h-8 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {doctorName}
+                </h2>
+                <p className="text-gray-600">
+                  {doctorProfile?.specialization || "General Practice"} 
+                  {doctorProfile?.yearsOfExperience ? ` • ${doctorProfile.yearsOfExperience} years experience` : ''}
+                </p>
+                {doctorProfile?.pvmcRegistrationNumber && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    PVMC: {doctorProfile.pvmcRegistrationNumber}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {/* Doctor Services Banner */}
+        {availableTypes.length > 0 && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex items-center flex-wrap gap-2">
+              <span className="text-blue-800 font-semibold">Available Services:</span>
+              {availableTypes.map(type => (
+                <span key={type.value} className="inline-flex items-center px-3 py-1 bg-white rounded-full text-sm border border-blue-200">
+                  <span className="mr-1">{type.icon}</span>
+                  {type.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Clinic/Hours Info if applicable */}
+        {(doctorProfile?.clinicDetails?.clinicName || doctorProfile?.clinicDetails?.startTime) && (
+          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 mr-3 text-purple-600 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l14-7V5" />
+              </svg>
+              <div>
+                {doctorProfile.clinicDetails?.clinicName && (
+                  <p className="text-purple-800 font-medium">{doctorProfile.clinicDetails.clinicName}</p>
+                )}
+                <p className="text-purple-700 text-sm">
+                  {doctorProfile.clinicDetails?.clinicCity && `${doctorProfile.clinicDetails.clinicCity}, `}
+                  {doctorProfile.clinicDetails?.clinicDistrict && `${doctorProfile.clinicDetails.clinicDistrict}`}
+                  {doctorProfile.clinicDetails?.clinicStreet && `, ${doctorProfile.clinicDetails.clinicStreet}`}
+                </p>
+                {doctorProfile.clinicDetails?.startTime && doctorProfile.clinicDetails?.endTime && (
+                  <p className="text-purple-700 text-sm mt-1">
+                    Clinic Hours: {doctorProfile.clinicDetails.startTime} - {doctorProfile.clinicDetails.endTime}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Home Visit Areas if applicable */}
+        {doctorProfile?.homeVisitDetails?.areasCovered && doctorProfile.homeVisitDetails.areasCovered.length > 0 && (
+          <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 mr-3 text-indigo-600 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <div>
+                <p className="text-indigo-800 font-medium">Home Visit Areas</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {doctorProfile.homeVisitDetails.areasCovered.map((area, index) => (
+                    <span key={index} className="px-2 py-1 bg-white rounded text-xs text-indigo-700 border border-indigo-200">
+                      {area}
+                    </span>
+                  ))}
+                </div>
+                {doctorProfile.homeVisitDetails.charges && (
+                  <p className="text-indigo-700 text-sm mt-2">
+                    Home Visit Charges: {doctorProfile.homeVisitDetails.charges} PKR
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Form */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -261,9 +541,11 @@ const CreateAppointment = () => {
                   required
                 >
                   <option value="">Select Type</option>
-                  <option value="Home Visit">Home Visit</option>
-                  <option value="Video Call">Video Call</option>
-                  <option value="On Clinic">On Clinic</option>
+                  {availableTypes.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.icon} {type.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

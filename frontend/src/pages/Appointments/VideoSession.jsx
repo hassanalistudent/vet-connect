@@ -1,6 +1,6 @@
 // src/pages/VideoSession.jsx - Updated WhatsApp Style
 import React, { useState, useEffect } from "react";
-import VideoCall from "../../components/videoCall";
+import VideoCall from "../../components/VideoCall";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetAppointmentDetailsQuery } from "../../redux/api/appointmentApiSlice";
 import Loader from "../../components/Loader";
@@ -136,8 +136,8 @@ const VideoSession = () => {
         </div>
       </div>
 
-      {/* Video Call Component */}
-      <VideoCall uid={uid} />
+      {/* Video Call Component - FIXED PROPS */}
+      <VideoCall appointmentId={appointmentId} uid={uid} />
 
       {/* Footer Info */}
       <div className="fixed bottom-0 left-0 right-0 bg-[#0C1317]/90 backdrop-blur-sm border-t border-[#2A3942] p-4 z-50">
@@ -158,15 +158,15 @@ const VideoSession = () => {
             {/* Quick Stats */}
             <div className="flex items-center space-x-6 text-sm">
               <div className="flex items-center space-x-2">
-                <span className="text-[#8696A0">Appointment Type:</span>
+                <span className="text-[#8696A0]">Appointment Type:</span>
                 <span className="text-white font-medium">{appointment?.appointmentType || "Video Call"}</span>
               </div>
               <div className="hidden lg:flex items-center space-x-2">
-                <span className="text-[#8696A0">Doctor:</span>
+                <span className="text-[#8696A0]">Doctor:</span>
                 <span className="text-white font-medium">{appointment?.doctorId?.fullName || "Dr. Available"}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-[#8696A0">Status:</span>
+                <span className="text-[#8696A0]">Status:</span>
                 <span className={`px-2 py-1 rounded text-xs font-bold ${
                   appointment?.status === "Accepted" ? "bg-green-500/20 text-green-400" : 
                   appointment?.status === "Scheduled" ? "bg-blue-500/20 text-blue-400" : 

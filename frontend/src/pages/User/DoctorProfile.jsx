@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import moment from "moment";
 import Loader from "../../components/Loader";
 import {
   useGetProfileQuery,
@@ -48,7 +50,7 @@ const DoctorProfile = ({ userInfo }) => {
     endTime: "",
   });
 
-  // Home Visit Details - Now with individual input management
+  // Home Visit Details
   const [homeVisitDetails, setHomeVisitDetails] = useState({
     areasCovered: [],
     charges: ""
@@ -56,6 +58,9 @@ const DoctorProfile = ({ userInfo }) => {
   
   // New area input for adding areas one by one
   const [newArea, setNewArea] = useState("");
+  
+  // Reviews state
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   // API hooks
   const { data: profile, isLoading, refetch } = useGetProfileQuery();
@@ -308,6 +313,93 @@ const DoctorProfile = ({ userInfo }) => {
     }
   };
 
+  // Star Rating Component
+  const StarRating = ({ rating }) => {
+    const stars = [1, 2, 3, 4, 5];
+    
+    return (
+      <div className="flex items-center space-x-1">
+        {stars.map((star) => (
+          <span key={star} className="text-lg">
+            {star <= rating ? (
+              <span className="text-yellow-500">★</span>
+            ) : (
+              <span className="text-gray-300">☆</span>
+            )}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // Reviews Section Component
+  const ReviewsSection = ({ reviews, doctorId, doctorName }) => {
+    if (!reviews || reviews.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+          </div>
+          <p className="text-gray-600">No reviews yet</p>
+        </div>
+      );
+    }
+
+    const displayReviews = showAllReviews ? reviews : reviews.slice(0, 3);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h4 className="font-semibold text-gray-900">Patient Reviews</h4>
+            <div className="flex items-center mt-1">
+              <StarRating rating={profile?.doctorProfile?.rating || 0} />
+              <span className="ml-2 text-sm text-gray-600">
+                {profile?.doctorProfile?.rating?.toFixed(1) || "0.0"} ({profile?.doctorProfile?.numReviews || 0} {profile?.doctorProfile?.numReviews === 1 ? 'review' : 'reviews'})
+              </span>
+            </div>
+          </div>
+          {reviews.length > 3 && (
+            <button
+              onClick={() => setShowAllReviews(!showAllReviews)}
+              className="text-sm text-navigray hover:text-navigray-dark font-medium"
+            >
+              {showAllReviews ? 'Show Less' : `View All ${reviews.length} Reviews`}
+            </button>
+          )}
+        </div>
+        
+        <div className="space-y-4">
+          {displayReviews.map((review, index) => (
+            <div key={review._id || index} className="bg-white rounded-lg p-5 border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-gradient-to-r from-navigray to-navigray-dark rounded-full flex items-center justify-center text-white font-semibold">
+                      {review.name?.charAt(0) || 'U'}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{review.name}</p>
+                    <div className="flex items-center mt-1">
+                      <StarRating rating={review.rating} />
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {moment(review.createdAt).fromNow()}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 mt-2 pl-13">{review.comment}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) return <Loader />;
 
   const verificationImageUrl =
@@ -319,6 +411,10 @@ const DoctorProfile = ({ userInfo }) => {
     profile?.doctorProfile?.verificationUploads?.status ||
     formData.verificationUploads?.status ||
     "Pending";
+
+  const doctorReviews = profile?.doctorProfile?.reviews || [];
+  const doctorRating = profile?.doctorProfile?.rating || 0;
+  const numReviews = profile?.doctorProfile?.numReviews || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -908,7 +1004,21 @@ const DoctorProfile = ({ userInfo }) => {
                   <h2 className="text-3xl font-bold text-white mb-2">
                     {profile?.fullName || "Doctor Profile"}
                   </h2>
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/90">
+                  
+                  {/* Rating Display - Added here */}
+                  {numReviews > 0 && (
+                    <div className="mt-2 flex items-center justify-center md:justify-start bg-white/20 rounded-lg px-4 py-2 inline-flex">
+                      <StarRating rating={doctorRating} />
+                      <span className="ml-2 text-white font-medium">
+                        {doctorRating.toFixed(1)} 
+                        <span className="text-white/80 ml-1">
+                          ({numReviews} {numReviews === 1 ? 'review' : 'reviews'})
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/90 mt-2">
                     <span className="flex items-center">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -1129,6 +1239,17 @@ const DoctorProfile = ({ userInfo }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Reviews Section - Added here */}
+              {profile?.doctorProfile && (
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <ReviewsSection 
+                    reviews={doctorReviews} 
+                    doctorId={profile.doctorProfile._id}
+                    doctorName={profile.fullName}
+                  />
+                </div>
+              )}
 
               {/* Empty State */}
               {!profile?.doctorProfile && (

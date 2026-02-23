@@ -1,6 +1,7 @@
 import User from "../models/user.js";
 import DoctorProfile from "../models/doctorProfile.js";
 import PetOwnerProfile from "../models/petOwnerProfile.js";
+import doctorAppointment from "../models/doctorAppointment.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import bcrypt from "bcryptjs";
 import createToken from "../utils/createToken.js";
@@ -468,7 +469,6 @@ const updateUserById = asyncHandler(async (req, res) => {
   });
 });
 
-// Add this function to your userController.js
 
 // ✅ Add this controller to get ALL DOCTORS (Admin Only)
 const getAllDoctors = asyncHandler(async (req, res) => {
@@ -498,6 +498,72 @@ const getAllDoctors = asyncHandler(async (req, res) => {
   });
 });
 
+const addDoctorReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const appointmentId = req.params.id;
+
+    // 1. Find appointment
+    const appointment = await doctorAppointment.findById(appointmentId)
+      .populate("doctorId", "fullName email"); // doctorId is a User object
+    if (!appointment) {
+      return res.status(404).json({ error: "Appointment not found" });
+    }
+
+    // 2. Get doctorId from appointment
+    const doctorUserId = appointment.doctorId._id;
+
+    // 3. Find doctor profile
+    const doctor = await DoctorProfile.findOne({ userId: doctorUserId })
+      .populate("userId", "fullName email");
+    if (!doctor) {
+      return res.status(404).json({ error: "Doctor profile not found" });
+    }
+
+    // 4. Prevent duplicate reviews
+    const alreadyReviewed = doctor.reviews.find(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+    if (alreadyReviewed) {
+      return res.status(400).json({ error: "You have already reviewed this doctor" });
+    }
+
+    // 5. Build review
+    const user = await User.findById(req.user._id);
+    const review = {
+      name: user.fullName || user.username,
+      rating: Number(rating),
+      comment,
+      user: req.user._id,
+    };
+
+    if (review.rating < 1 || review.rating > 5) {
+      return res.status(400).json({ error: "Rating must be between 1 and 5" });
+    }
+
+    // 6. Save review
+    doctor.reviews.push(review);
+    doctor.numReviews = doctor.reviews.length;
+    doctor.rating = parseFloat(
+      (
+        doctor.reviews.reduce((acc, item) => item.rating + acc, 0) /
+        doctor.reviews.length
+      ).toFixed(1)
+    );
+
+    await doctor.save();
+
+    res.status(201).json({
+      message: "Review added successfully",
+      reviews: doctor.reviews,
+      averageRating: doctor.rating,
+      totalReviews: doctor.numReviews,
+    });
+  } catch (error) {
+    console.error("Add review error:", error);
+    res.status(500).json({ error: error.message || "Server error" });
+  }
+};
 
 export {
   createUser,
@@ -515,5 +581,6 @@ export {
   resendVerification,
   forgotPassword,
   resetPassword,
-  checkVerified
+  checkVerified,
+  addDoctorReview
 };

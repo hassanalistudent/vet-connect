@@ -1,6 +1,20 @@
 // models/DoctorProfile.js
 import mongoose from "mongoose";
 
+const reviewSchema = mongoose.Schema({
+    name:{type:String,
+        required: true
+    },
+    rating: {type:Number,required:true},
+    comment:{type:String,required:true},
+    user:{type:mongoose.Schema.Types.ObjectId,
+        required:true,
+    ref:"User",
+},
+},
+{timestamps:true}
+);
+
 const doctorProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   pvmcRegistrationNumber: { type: String, required: true },
@@ -29,7 +43,9 @@ const doctorProfileSchema = new mongoose.Schema({
     areasCovered: [String],
     charges: Number,
   },
-
+    reviews: { type: [reviewSchema], default: [] },
+    rating:{type:Number,required:true,default:0},
+    numReviews:{type:Number,required:true,default:0},
   verificationUploads: {
     veterinaryLicense: String,
     status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },

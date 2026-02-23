@@ -11,6 +11,7 @@ import petRoutes from "./routes/petRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js"
 import connectDB from "./config/db.js";
 
 
@@ -35,6 +36,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/pets", petRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/video", videoRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 const __dirname = path.resolve();
 app.use("/uploads", express.static(path.join(__dirname + "/uploads")));

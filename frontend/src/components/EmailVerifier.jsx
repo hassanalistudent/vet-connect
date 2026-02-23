@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router";
 import { useCheckVerifiedQuery } from "../redux/api/userApiSlice";
-
+import Loader from "./Loader";
 export const EmailVerifier = () => {
   // 🔥 RTK Query handles everything automatically
   const { 
@@ -9,11 +9,12 @@ export const EmailVerifier = () => {
     error 
   } = useCheckVerifiedQuery();
 console.log(data)
-  // 🔄 Loading
+  //  Loading
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div>🔄 Checking email verification...</div>
+        <Loader/>
+        <div> Checking email verification...</div>
       </div>
     );
   }
