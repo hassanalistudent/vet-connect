@@ -124,20 +124,7 @@ const Home = () => {
     skip: userInfo?.role !== 'PetOwner'
   });
 
-  // Log for debugging
-  useEffect(() => {
-    if (doctorsData?.doctors && profileData) {
-      console.log('All doctors:', doctorsData.doctors);
-      console.log('Profile data:', profileData);
-      // Fix: Access district from petOwnerProfile.address
-      console.log('User district:', profileData?.petOwnerProfile?.address?.district);
-      
-      // Log all doctors with their districts
-      doctorsData.doctors.forEach(doctor => {
-        console.log(`Doctor ${doctor.fullName}:`, doctor.doctorProfile?.clinicDetails?.clinicDistrict);
-      });
-    }
-  }, [doctorsData, profileData]);
+  
 
   // Filter doctors based on pet owner's district
   useEffect(() => {
@@ -226,12 +213,12 @@ const Home = () => {
       return (
         <>
           {/* Welcome Banner */}
-          <div className="bg-gradient-to-r from-navigray to-navigray-dark text-white">
+          <div className="bg-gradient-to-r from-navigray to-navigray-dark text-navigray">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
               <h1 className="text-4xl font-bold mb-3">
                 Welcome back, {userInfo.fullName}!
               </h1>
-              <p className="text-white/90 text-lg max-w-2xl">
+              <p className="text-black/90 text-lg max-w-2xl">
                 Find the best veterinary care for your pets. Browse doctors in your area or explore our full network.
               </p>
             </div>

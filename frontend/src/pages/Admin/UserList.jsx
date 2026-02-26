@@ -191,12 +191,7 @@ export const UserList = () => {
                     {users.filter(u => u.role === "PetOwner").length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Regular Users</span>
-                  <span className="font-semibold">
-                    {users.filter(u => !["Admin", "Doctor", "PetOwner"].includes(u.role)).length}
-                  </span>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -254,7 +249,6 @@ export const UserList = () => {
                     <option value="Admin">Admin</option>
                     <option value="Doctor">Doctor</option>
                     <option value="PetOwner">Pet Owner</option>
-                    <option value="User">Regular User</option>
                   </select>
                 </div>
 

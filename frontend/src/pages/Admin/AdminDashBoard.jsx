@@ -325,14 +325,14 @@ const AdminDashboard = () => {
               <div className="px-8 py-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-20 h-20 rounded-full bg-white/20 border-4 border-white/30 flex items-center justify-center text-white text-3xl font-bold">
+                    <div className="w-20 h-20 rounded-full bg-white/20 border-4 border-navigray/30 flex items-center justify-center text-navigray text-3xl font-bold">
                       {userInfo?.fullName?.charAt(0) || "A"}
                     </div>
                     <div>
-                      <h1 className="text-3xl font-bold text-white">
+                      <h1 className="text-3xl font-bold text-navigray">
                         Welcome back, {userInfo?.fullName?.split(' ')[0] || 'Admin'}!
                       </h1>
-                      <p className="text-white/90 mt-2 flex items-center">
+                      <p className="text-navigray/90 mt-2 flex items-center">
                         <FaRegClock className="mr-2" />
                         {moment().format("dddd, MMMM Do YYYY")}
                       </p>
