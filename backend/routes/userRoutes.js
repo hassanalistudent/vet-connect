@@ -52,7 +52,7 @@ router.route("/:id/add-doctor-review").post(authenticate, addDoctorReview);
 
 router.route("/:id")
   .delete(authenticate, authorizeAdmin, deleteUserById)
-  .get(authenticate, getUserById)
+  .get(getUserById)
   .put(authenticate, authorizeAdmin, updateUserById);
 
 export default router;

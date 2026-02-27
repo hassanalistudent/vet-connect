@@ -13,7 +13,6 @@ export const EmailVerifier = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader/>
-        <div> Checking email verification...</div>
       </div>
     );
   }

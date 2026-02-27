@@ -10,7 +10,6 @@ import {
 } from "react-router-dom";
 import { Provider } from "react-redux";   // ✅ FIX: import Provider
 import store from "./redux/store.js";
-
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
 import { PrivateRouter } from "./components/PrivateRouter.jsx";
@@ -47,12 +46,12 @@ import Home from "./pages/Home.jsx";
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<App />}>
+      <Route index={true}  path="/" element={<Home/>}/>
       <Route path="/login" element={<Login/>}/>
       <Route path="/register" element={<Register/>}/>
       <Route path="/verify-email" element={<AuthVerification />}/>
       <Route path="/resend-email" element={<ResendVerification />}/>
       <Route path="/reset-password/:token" element={<ResetPassword/>}/>
-      <Route index={true}  path="/" element={<Home/>}/>
       <Route  path=":id" element={<UserDetails/>}/>
 
       <Route  path="" element={<PrivateRouter/>}>  
@@ -87,7 +86,6 @@ const router = createBrowserRouter(
       </Route>
     </Route>
 
-    
   )
 );
 

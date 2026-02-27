@@ -1,39 +1,41 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-// ✅ Initial state: load userInfo from localStorage if available
 const initialState = {
   userInfo: localStorage.getItem("userInfo")
     ? JSON.parse(localStorage.getItem("userInfo"))
     : null,
+  loading: true, // ✅ start as loading until we check localStorage/API
 };
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // ✅ Set credentials after login/register
     setCredentials: (state, action) => {
       state.userInfo = action.payload;
+      state.loading = false;
 
-      // Save to localStorage
       localStorage.setItem("userInfo", JSON.stringify(action.payload));
 
-      // Optional: store expiration time (30 days ahead)
-      const expirationTime = new Date().getTime() + 30 * 24 * 60 * 60 * 1000;
+      const expirationTime =
+        new Date().getTime() + 30 * 24 * 60 * 60 * 1000;
       localStorage.setItem("expirationTime", expirationTime);
     },
 
-    // ✅ Logout user
     logout: (state) => {
       state.userInfo = null;
+      state.loading = false;
 
-      // Remove only auth-related keys
       localStorage.removeItem("userInfo");
       localStorage.removeItem("expirationTime");
+    },
+
+    finishLoading: (state) => {
+      // ✅ call this once you’ve checked localStorage/API
+      state.loading = false;
     },
   },
 });
 
-// ✅ Export actions and reducer
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, logout, finishLoading } = authSlice.actions;
 export default authSlice.reducer;

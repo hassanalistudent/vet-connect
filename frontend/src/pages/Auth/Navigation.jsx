@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import logo from "../../assets/logo.png"
 import {
   AiOutlineHome,
   AiOutlineLogin,
@@ -148,7 +149,7 @@ const Navigation = () => {
               icon: <FaDog className="w-6 h-6" />,
               label: "My Pets"
             },
-           
+
             {
               to: "/petowner/owner-appointments",
               icon: <AiOutlineCalendar className="w-6 h-6" />,
@@ -172,22 +173,16 @@ const Navigation = () => {
   return (
     <>
       {/* Top Navigation Bar - Always visible */}
-      <nav className="fixed top-0 left-0 right-0 bg-navigray text-white z-50 border-b border-navigray-dark/20 shadow-lg">
+      <nav className="fixed top-0 left-0 right-0 bg-white text-navigray z-50 border-b border-gray-200 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo and Company Name - Always visible */}
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <img 
-                  src="/uploads/logo.jpeg" 
-                  alt="Logo" 
-                  className="h-10 w-10 object-contain rounded border-2 border-white/20 group-hover:border-white/40 transition-all"
-                />
-                <div className="absolute -inset-1 bg-white/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </div>
-              <span className="text-white font-bold text-xl tracking-tight">
-                VettKoneckt
-              </span>
+            {/* Logo - Clean & Properly Fitted */}
+            <Link to="/" className="flex items-center">
+              <img
+                src={logo}
+                alt="VETT KONECKT"
+                className="h-10 md:h-11 w-auto object-contain"
+              />
             </Link>
 
             {/* Desktop Navigation - Center */}
@@ -196,9 +191,9 @@ const Navigation = () => {
                 <Link
                   key={index}
                   to={link.to}
-                  className="flex items-center px-4 py-2 rounded-lg hover:bg-navigray-dark/50 transition-all text-sm font-medium group"
+                  className="flex items-center px-4 py-2 rounded-lg hover:bg-navigray hover:text-white transition-all text-sm font-medium text-gray-700"
                 >
-                  <span className="mr-2 text-navigray-light group-hover:text-white transition-colors">{link.icon}</span>
+                  <span className="mr-2 text-navigray group-hover:text-white transition-colors">{link.icon}</span>
                   <span className="group-hover:text-white transition-colors">{link.label}</span>
                 </Link>
               ))}
@@ -209,19 +204,19 @@ const Navigation = () => {
               <div className="hidden md:block relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-navigray-dark/50 transition-all group"
+                  className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-navigray hover:text-white transition-all group text-gray-700"
                 >
-                  <div className="w-8 h-8 bg-navigray-dark rounded-full flex items-center justify-center border-2 border-white/20 group-hover:border-white/40 transition-all">
+                  <div className="w-8 h-8 bg-navigray rounded-full flex items-center justify-center border-2 border-navigray-light/20 group-hover:border-white/40 transition-all">
                     <AiOutlineUser className="text-lg text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium truncate max-w-[150px] text-white">
+                    <p className="text-sm font-medium truncate max-w-[150px] text-gray-700 group-hover:text-white">
                       {userInfo.fullName}
                     </p>
-                    <p className="text-xs text-navigray-light">{userInfo.role}</p>
+                    <p className="text-xs text-gray-500 group-hover:text-white/80">{userInfo.role}</p>
                   </div>
                   <svg
-                    className={`w-4 h-4 text-navigray-light transition-transform duration-300 ${profileDropdownOpen ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-gray-500 group-hover:text-white transition-transform duration-300 ${profileDropdownOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -236,7 +231,7 @@ const Navigation = () => {
                     <div className="py-1">
                       <Link
                         to={`/${userInfo.role.toLowerCase()}/profile`}
-                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray/5 hover:text-navigray transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray hover:text-white transition-colors"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         Profile Settings
@@ -258,9 +253,9 @@ const Navigation = () => {
               <div className="md:hidden relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="p-2 rounded-lg hover:bg-navigray-dark/50 transition-all group"
+                  className="p-2 rounded-lg hover:bg-navigray transition-all group"
                 >
-                  <div className="w-8 h-8 bg-navigray-dark rounded-full flex items-center justify-center border-2 border-white/20 group-hover:border-white/40 transition-all">
+                  <div className="w-8 h-8 bg-navigray rounded-full flex items-center justify-center border-2 border-navigray-light/20">
                     <AiOutlineUser className="text-lg text-white" />
                   </div>
                 </button>
@@ -275,7 +270,7 @@ const Navigation = () => {
                     <div className="py-1">
                       <Link
                         to={`/${userInfo.role.toLowerCase()}/profile`}
-                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray/5 hover:text-navigray transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray hover:text-white transition-colors"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         Profile Settings
