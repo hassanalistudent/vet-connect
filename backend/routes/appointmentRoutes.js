@@ -12,6 +12,7 @@ import {
   markAppointmentPaid,
   completeAppointment,
   deleteOrCancelAppointment,
+  notifyDoctorsAgain,
 } from "../controllers/appointmentController.js";
 
 import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
@@ -23,7 +24,8 @@ router.route("/")
 // Admin gets all appointments (with filters via query)
 router.route("/")
   .get(authenticate, authorizeAdmin, getAppointments);
-
+router.route("/notify-doctors")
+  .post(authenticate, authorizeAdmin, notifyDoctorsAgain);
 // Doctor gets own appointments
 router.route("/doctor")
   .get(authenticate, getDoctorAppointments);

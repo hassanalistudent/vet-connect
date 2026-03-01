@@ -1,44 +1,50 @@
 @import "tailwindcss";
 
-@layer components {
+@theme {
+  --color-navigray: #1e3a8a;
+  --color-navigray-dark: #1e40af;
+  --color-navigray-light: #60a5fa;
+}
+
+@layer utilities {
   .bg-navigray {
-    background-color: #1e3a8a;
+    background-color: var(--color-navigray);
   }
   
   .bg-navigray-dark {
-    background-color: #1e40af;
+    background-color: var(--color-navigray-dark);
   }
   
   .bg-navigray-light {
-    background-color: #60a5fa;
+    background-color: var(--color-navigray-light);
   }
   
   .text-navigray {
-    color: #1e3a8a;
+    color: var(--color-navigray);
   }
   
   .text-navigray-dark {
-    color: #1e40af;
+    color: var(--color-navigray-dark);
   }
   
   .text-navigray-light {
-    color: #60a5fa;
+    color: var(--color-navigray-light);
   }
   
   .border-navigray {
-    border-color: #1e3a8a;
+    border-color: var(--color-navigray);
   }
   
   .focus\:ring-navigray:focus {
-    --tw-ring-color: #1e3a8a;
+    --tw-ring-color: var(--color-navigray);
   }
   
   .hover\:bg-navigray-dark:hover {
-    background-color: #1e40af;
+    background-color: var(--color-navigray-dark);
   }
   
   .hover\:text-navigray-dark:hover {
-    color: #1e40af;
+    color: var(--color-navigray-dark);
   }
 }
 

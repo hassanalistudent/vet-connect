@@ -2,7 +2,8 @@
 import asyncHandler from "express-async-handler";
 import DoctorAppointment from "../models/doctorAppointment.js";
 import MedicalHistory from "../models/medicalHistory.js";
-
+import User from "../models/user.js"
+import { sendAppointmentEmail } from "../servises/emailService.js";
 /*
   req.userInfo example:
   {
@@ -20,6 +21,7 @@ import MedicalHistory from "../models/medicalHistory.js";
 // @desc   Pet Owner creates appointment
 // @route  POST /api/appointments
 // @access Private (PetOwner)
+// Controller function
 const createAppointment = asyncHandler(async (req, res) => {
   const {
     doctorId,
@@ -30,10 +32,9 @@ const createAppointment = asyncHandler(async (req, res) => {
     appointmentType,
   } = req.body;
 
-  // ✅ SAFETY CHECK: Ensure user is authenticated
   if (!req.user || !req.user._id) {
     res.status(401);
-    throw new Error('Authentication required. Please login again.');
+    throw new Error("Authentication required. Please login again.");
   }
 
   const effectiveOwnerId = req.user._id;
@@ -48,6 +49,20 @@ const createAppointment = asyncHandler(async (req, res) => {
     appointmentType,
     status: "Scheduled",
   });
+
+  // Fetch doctor and owner info
+  const doctor = await User.findById(doctorId);
+  const owner = await User.findById(effectiveOwnerId);
+
+  // Send email to doctor
+  if (doctor && doctor.email) {
+    await sendAppointmentEmail(
+      doctor.email,
+      doctor.fullName,
+      owner.fullName,
+      appointment
+    );
+  }
 
   res.status(201).json({
     success: true,
@@ -301,6 +316,49 @@ const deleteOrCancelAppointment = asyncHandler(async (req, res) => {
   });
 });
 
+// Admin notify doctors again for multiple appointments
+const notifyDoctorsAgain = asyncHandler(async (req, res) => {
+  const { appointmentIds } = req.body; // array of appointment IDs from frontend
+
+  if (!appointmentIds || !Array.isArray(appointmentIds)) {
+    res.status(400);
+    throw new Error("appointmentIds must be provided as an array");
+  }
+
+  const results = [];
+
+  for (const id of appointmentIds) {
+    const appointment = await DoctorAppointment.findById(id);
+    if (!appointment) {
+      results.push({ id, status: "failed", reason: "Appointment not found" });
+      continue;
+    }
+
+    const doctor = await User.findById(appointment.doctorId);
+    const owner = await User.findById(appointment.ownerId);
+
+    if (!doctor || !doctor.email) {
+      results.push({ id, status: "failed", reason: "Doctor not found or missing email" });
+      continue;
+    }
+
+    await sendAppointmentEmail(
+      doctor.email,
+      doctor.fullName,
+      owner?.fullName || "Unknown Owner",
+      appointment
+    );
+
+    results.push({ id, status: "success", doctorEmail: doctor.email });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Doctors notified again",
+    results,
+  });
+});
+
 // -------------------- EXPORTS --------------------
 export {
   createAppointment,
@@ -313,4 +371,5 @@ export {
   markAppointmentPaid,
   completeAppointment,
   deleteOrCancelAppointment,
+  notifyDoctorsAgain
 };

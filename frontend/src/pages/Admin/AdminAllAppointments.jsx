@@ -2,15 +2,16 @@ import { Link } from "react-router-dom";
 import moment from "moment";
 import {
   useGetAppointmentsQuery,
+  useNotifyDoctorsAgainMutation,
 } from "../../redux/api/appointmentApiSlice";
 import Loader from "../../components/Loader";
-import { 
-  FaCalendar, 
-  FaClock, 
-  FaStethoscope, 
-  FaUser, 
-  FaPaw, 
-  FaMoneyBill, 
+import {
+  FaCalendar,
+  FaClock,
+  FaStethoscope,
+  FaUser,
+  FaPaw,
+  FaMoneyBill,
   FaEye,
   FaEdit,
   FaBell,
@@ -19,17 +20,25 @@ import {
   FaTimes,
   FaSortAmountDown,
   FaSortAmountUp,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaCheckSquare,
+  FaSquare,
+  FaRegCheckSquare
 } from "react-icons/fa";
 import { useState, useMemo } from "react";
+import { toast } from "react-toastify";
 
 const AdminAllAppointments = () => {
-  const { data, isLoading, isError } = useGetAppointmentsQuery();
-  
+  const { data, isLoading, isError, refetch } = useGetAppointmentsQuery();
+  const [notifyDoctors, { isLoading: isNotifying }] = useNotifyDoctorsAgainMutation();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("urgent");
+  const [selectedAppointments, setSelectedAppointments] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [isBulkNotifying, setIsBulkNotifying] = useState(false);
 
   const appointments = data?.appointments || [];
 
@@ -42,10 +51,10 @@ const AdminAllAppointments = () => {
   // Filter and sort appointments
   const filteredAndSortedAppointments = useMemo(() => {
     let filtered = [...appointments];
-    
+
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(appt => 
+      filtered = filtered.filter(appt =>
         appt.petId?.petName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appt.petId?.petType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appt.doctorId?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,58 +62,126 @@ const AdminAllAppointments = () => {
         appt._id?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(appt => appt.status === statusFilter);
     }
-    
+
     // Apply type filter
     if (typeFilter !== "all") {
       filtered = filtered.filter(appt => appt.appointmentType === typeFilter);
     }
-    
+
     // Apply sorting
     filtered.sort((a, b) => {
       const dateA = moment(a.appointmentDate);
       const dateB = moment(b.appointmentDate);
       const now = moment();
-      
+
       switch (sortOrder) {
         case "urgent":
-         // For urgent: Show active appointments first, then completed/cancelled at the bottom
-         const aIsActive = !["Completed", "Cancelled"].includes(a.status);
-         const bIsActive = !["Completed", "Cancelled"].includes(b.status);
-         
-         if (aIsActive && !bIsActive) return -1;
-         if (!aIsActive && bIsActive) return 1;
-         
-         // If both are active, sort by closest date
-         if (aIsActive && bIsActive) {
-           const diffA = Math.abs(dateA.diff(now));
-           const diffB = Math.abs(dateB.diff(now));
-           return diffA - diffB;
-         }
-         
-         // If both are completed/cancelled, sort by newest first
-         return dateB - dateA;
-         
+          // For urgent: Show active appointments first, then completed/cancelled at the bottom
+          const aIsActive = !["Completed", "Cancelled"].includes(a.status);
+          const bIsActive = !["Completed", "Cancelled"].includes(b.status);
+
+          if (aIsActive && !bIsActive) return -1;
+          if (!aIsActive && bIsActive) return 1;
+
+          // If both are active, sort by closest date
+          if (aIsActive && bIsActive) {
+            const diffA = Math.abs(dateA.diff(now));
+            const diffB = Math.abs(dateB.diff(now));
+            return diffA - diffB;
+          }
+
+          // If both are completed/cancelled, sort by newest first
+          return dateB - dateA;
+
         case "oldest":
-         return dateA - dateB;
-         
+          return dateA - dateB;
+
         case "newest":
-         return dateB - dateA;
-         
+          return dateB - dateA;
+
         default:
-         return 0;
+          return 0;
       }
     });
-    
+
     return filtered;
   }, [appointments, searchTerm, statusFilter, typeFilter, sortOrder]);
 
+  // Handle select all appointments
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedAppointments([]);
+      setSelectAll(false);
+    } else {
+      const allIds = filteredAndSortedAppointments.map(app => app._id);
+      setSelectedAppointments(allIds);
+      setSelectAll(true);
+    }
+  };
+
+  // Handle single appointment selection
+  const handleSelectAppointment = (appointmentId) => {
+    setSelectedAppointments(prev => {
+      if (prev.includes(appointmentId)) {
+        const newSelection = prev.filter(id => id !== appointmentId);
+        setSelectAll(newSelection.length === filteredAndSortedAppointments.length);
+        return newSelection;
+      } else {
+        const newSelection = [...prev, appointmentId];
+        setSelectAll(newSelection.length === filteredAndSortedAppointments.length);
+        return newSelection;
+      }
+    });
+  };
+
+  // Handle single appointment notification
+  const handleNotifyDoctor = async (appointmentId) => {
+    try {
+      // Pass the array directly, not wrapped in an object
+      const response = await notifyDoctors([appointmentId]).unwrap();
+      toast.success(`Notification sent successfully to ${response.results?.length || 0} doctor(s)`);
+      refetch();
+    } catch (error) {
+      console.error("Notification error:", error);
+      toast.error(error?.data?.message || "Failed to send notification");
+    }
+  };
+
+  // Handle bulk notification
+  const handleBulkNotify = async () => {
+    if (selectedAppointments.length === 0) {
+      toast.warning("Please select at least one appointment");
+      return;
+    }
+
+    setIsBulkNotifying(true);
+    try {
+      // Pass the array directly, not wrapped in an object
+      const response = await notifyDoctors(selectedAppointments).unwrap();
+      toast.success(`Notifications sent successfully to ${response.results?.length || 0} doctor(s)`);
+      setSelectedAppointments([]);
+      setSelectAll(false);
+      refetch();
+    } catch (error) {
+      console.error("Bulk notification error:", error);
+      toast.error(error?.data?.message || "Failed to send bulk notifications");
+    } finally {
+      setIsBulkNotifying(false);
+    }
+  };
+  // Clear all selections
+  const handleClearSelection = () => {
+    setSelectedAppointments([]);
+    setSelectAll(false);
+  };
+
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case "Completed": return "bg-green-100 text-green-800 border-green-200";
       case "Cancelled": return "bg-red-100 text-red-800 border-red-200";
       case "Accepted": return "bg-blue-100 text-blue-800 border-blue-200";
@@ -115,7 +192,7 @@ const AdminAllAppointments = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
+    switch (status) {
       case "Completed": return "✓";
       case "Cancelled": return "✗";
       case "Accepted": return "✓";
@@ -130,11 +207,11 @@ const AdminAllAppointments = () => {
     if (status === "Completed" || status === "Cancelled") {
       return null;
     }
-    
+
     const today = moment().startOf('day');
     const appDate = moment(appointmentDate).startOf('day');
     const diffDays = appDate.diff(today, 'days');
-    
+
     if (diffDays < 0) {
       return (
         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full flex items-center">
@@ -177,8 +254,8 @@ const AdminAllAppointments = () => {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Appointments</h3>
             <p className="text-gray-600 mb-6">Unable to load appointment information. Please try again.</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-navigray text-white rounded-lg hover:bg-navigray-dark transition-colors"
             >
               Retry
@@ -209,6 +286,29 @@ const AdminAllAppointments = () => {
                     )}
                   </p>
                 </div>
+
+                {/* Bulk Selection Controls */}
+                {selectedAppointments.length > 0 && (
+                  <div className="flex items-center gap-3 bg-navigray/10 p-2 rounded-lg">
+                    <span className="text-sm font-medium text-navigray">
+                      {selectedAppointments.length} selected
+                    </span>
+                    <button
+                      onClick={handleBulkNotify}
+                      disabled={isBulkNotifying || isNotifying}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50"
+                    >
+                      <FaBell className="mr-2" />
+                      {isBulkNotifying ? "Notifying..." : "Notify Selected"}
+                    </button>
+                    <button
+                      onClick={handleClearSelection}
+                      className="p-2 text-gray-500 hover:text-gray-700"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Filters and Search */}
@@ -289,6 +389,23 @@ const AdminAllAppointments = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Select All Control */}
+              {filteredAndSortedAppointments.length > 0 && (
+                <div className="mt-4 flex items-center">
+                  <button
+                    onClick={handleSelectAll}
+                    className="flex items-center text-sm text-gray-600 hover:text-navigray"
+                  >
+                    {selectAll ? (
+                      <FaCheckSquare className="w-5 h-5 mr-2 text-navigray" />
+                    ) : (
+                      <FaSquare className="w-5 h-5 mr-2 text-gray-400" />
+                    )}
+                    Select All ({filteredAndSortedAppointments.length})
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Appointment Cards */}
@@ -300,7 +417,7 @@ const AdminAllAppointments = () => {
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No Appointments Found</h3>
                 <p className="text-gray-600">
                   {searchTerm || statusFilter !== "all" || typeFilter !== "all"
-                    ? "Try adjusting your search or filters" 
+                    ? "Try adjusting your search or filters"
                     : "No appointments have been scheduled yet"}
                 </p>
                 {(searchTerm || statusFilter !== "all" || typeFilter !== "all") && (
@@ -319,11 +436,28 @@ const AdminAllAppointments = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredAndSortedAppointments.map((appt) => (
-                  <div key={appt._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                  <div
+                    key={appt._id}
+                    className={`bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${selectedAppointments.includes(appt._id)
+                        ? 'border-navigray ring-2 ring-navigray/20'
+                        : 'border-gray-200'
+                      }`}
+                  >
                     {/* Header with Status and Date */}
                     <div className={`px-6 py-4 border-b ${getStatusColor(appt.status).split(' ')[0]}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
+                          {/* Selection Checkbox */}
+                          <button
+                            onClick={() => handleSelectAppointment(appt._id)}
+                            className="mr-2"
+                          >
+                            {selectedAppointments.includes(appt._id) ? (
+                              <FaCheckSquare className="w-5 h-5 text-navigray" />
+                            ) : (
+                              <FaSquare className="w-5 h-5 text-gray-400 hover:text-navigray" />
+                            )}
+                          </button>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(appt.status)}`}>
                             <span className="mr-1">{getStatusIcon(appt.status)}</span>
                             {appt.status}
@@ -360,29 +494,28 @@ const AdminAllAppointments = () => {
                           <h3 className="text-lg font-semibold text-gray-900">
                             {appt.petId?.petName || appt.petId?.petType || "Pet"}
                           </h3>
-                          
+
                           {/* Appointment Date - Full Format */}
                           <div className="mt-1 flex items-center text-sm font-medium text-navigray">
                             <FaCalendar className="w-4 h-4 mr-1" />
                             {moment(appt.appointmentDate).format("dddd, MMMM Do YYYY")}
                           </div>
-                          
+
                           {/* Time & Type */}
                           <div className="mt-1 flex items-center text-sm text-gray-700">
                             <FaClock className="w-4 h-4 mr-1 text-gray-500" />
                             {formatLocalTime(appt.appointmentTime)} • {appt.appointmentType}
                           </div>
-                          
+
                           {/* Payment */}
                           <div className="mt-2 flex items-center text-sm text-gray-600">
                             <FaMoneyBill className="w-4 h-4 mr-2 text-gray-400" />
                             <span>
                               <span className="font-medium">{appt.charges} PKR</span>
-                              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                                appt.isPaid 
-                                  ? "bg-green-100 text-green-700" 
+                              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${appt.isPaid
+                                  ? "bg-green-100 text-green-700"
                                   : "bg-yellow-100 text-yellow-700"
-                              }`}>
+                                }`}>
                                 {appt.isPaid ? "Paid ✓" : "Pending"}
                               </span>
                             </span>
@@ -439,15 +572,13 @@ const AdminAllAppointments = () => {
                           <FaEye className="mr-2" />
                           View Details
                         </Link>
-                        
+
                         {appt.status !== "Completed" && appt.status !== "Cancelled" && (
                           <>
                             <button
-                              onClick={() => {
-                                // Implement resend notification logic
-                                alert(`Resending notification for appointment ${appt._id}`);
-                              }}
-                              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center"
+                              onClick={() => handleNotifyDoctor(appt._id)}
+                              disabled={isNotifying}
+                              className="flex-1 min-w-[120px] px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center disabled:opacity-50"
                             >
                               <FaBell className="mr-2" />
                               Notify
@@ -509,7 +640,7 @@ const AdminAllAppointments = () => {
                     <div>
                       <div className="text-sm text-gray-600">Overdue</div>
                       <div className="text-xl font-semibold">
-                        {appointments.filter(a => 
+                        {appointments.filter(a =>
                           moment(a.appointmentDate).isBefore(moment(), 'day') &&
                           !["Completed", "Cancelled"].includes(a.status)
                         ).length}
@@ -523,8 +654,7 @@ const AdminAllAppointments = () => {
 
           {/* Sidebar */}
           <div className="lg:w-1/4">
-           
-            
+
             {/* Stats Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-8">
               <h3 className="font-semibold text-gray-900 mb-4">Appointment Stats</h3>
@@ -532,7 +662,7 @@ const AdminAllAppointments = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Today's</span>
                   <span className="font-semibold">
-                    {appointments.filter(a => 
+                    {appointments.filter(a =>
                       moment(a.appointmentDate).isSame(moment(), 'day') &&
                       !["Completed", "Cancelled"].includes(a.status)
                     ).length}
@@ -541,7 +671,7 @@ const AdminAllAppointments = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Tomorrow</span>
                   <span className="font-semibold">
-                    {appointments.filter(a => 
+                    {appointments.filter(a =>
                       moment(a.appointmentDate).isSame(moment().add(1, 'day'), 'day') &&
                       !["Completed", "Cancelled"].includes(a.status)
                     ).length}
@@ -550,7 +680,7 @@ const AdminAllAppointments = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-red-600">Overdue</span>
                   <span className="font-semibold">
-                    {appointments.filter(a => 
+                    {appointments.filter(a =>
                       moment(a.appointmentDate).isBefore(moment(), 'day') &&
                       !["Completed", "Cancelled"].includes(a.status)
                     ).length}
@@ -610,13 +740,15 @@ const AdminAllAppointments = () => {
                   Create Appointment
                 </Link>
                 <button
-                  onClick={() => {
-                    // Implement bulk notification
-                    alert("Send bulk notifications to all upcoming appointments");
-                  }}
-                  className="block w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-center"
+                  onClick={handleBulkNotify}
+                  disabled={selectedAppointments.length === 0 || isBulkNotifying}
+                  className={`block w-full px-4 py-3 rounded-lg transition-colors text-center font-medium flex items-center justify-center ${selectedAppointments.length > 0
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                 >
-                  Bulk Notify
+                  <FaBell className="mr-2" />
+                  Bulk Notify {selectedAppointments.length > 0 && `(${selectedAppointments.length})`}
                 </button>
                 <button
                   onClick={() => window.print()}
@@ -642,12 +774,11 @@ const AdminAllAppointments = () => {
                           {appt.petId?.petName || "Pet"}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center">
-                          <span className={`inline-block w-2 h-2 rounded-full mr-1 ${
-                            appt.status === "Completed" ? "bg-green-400" :
-                            appt.status === "Cancelled" ? "bg-red-400" :
-                            appt.status === "Scheduled" ? "bg-purple-400" :
-                            "bg-blue-400"
-                          }`}></span>
+                          <span className={`inline-block w-2 h-2 rounded-full mr-1 ${appt.status === "Completed" ? "bg-green-400" :
+                              appt.status === "Cancelled" ? "bg-red-400" :
+                                appt.status === "Scheduled" ? "bg-purple-400" :
+                                  "bg-blue-400"
+                            }`}></span>
                           {appt.status} • {moment(appt.updatedAt || appt.createdAt).fromNow()}
                         </div>
                       </div>

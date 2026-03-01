@@ -12,6 +12,7 @@ import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import moment from "moment";
 import OwnerActions from "./OwnerActions";
+import { useCreateReviewMutation } from "../../redux/api/platformreviewApiSlice";
 import { useAddDoctorReviewMutation } from "../../redux/api/userApiSlice";
 
 const PetOwnerResponse = () => {
@@ -25,13 +26,21 @@ const PetOwnerResponse = () => {
   const [ownerResponse] = useOwnerResponseMutation();
   const [markPaid] = useMarkAppointmentPaidMutation();
   const [addDoctorReview] = useAddDoctorReviewMutation();
+  const [createPlatformReview] = useCreateReviewMutation();
 
   // Review state
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [hoverRating, setHoverRating] = useState(0);
+  const [showDoctorReviewForm, setShowDoctorReviewForm] = useState(false);
+  const [showPlatformReviewForm, setShowPlatformReviewForm] = useState(false);
+  const [doctorReviewRating, setDoctorReviewRating] = useState(5);
+  const [doctorReviewComment, setDoctorReviewComment] = useState("");
+  const [platformReviewRating, setPlatformReviewRating] = useState(5);
+  const [platformReviewComment, setPlatformReviewComment] = useState("");
+  const [isSubmittingDoctorReview, setIsSubmittingDoctorReview] = useState(false);
+  const [isSubmittingPlatformReview, setIsSubmittingPlatformReview] = useState(false);
+  const [hoverDoctorRating, setHoverDoctorRating] = useState(0);
+  const [hoverPlatformRating, setHoverPlatformRating] = useState(0);
+  const [doctorReviewSubmitted, setDoctorReviewSubmitted] = useState(false);
+  const [platformReviewSubmitted, setPlatformReviewSubmitted] = useState(false);
 
   const currentUserId = useSelector((state) => state.auth.userInfo?._id);
   const currentUserRole = useSelector((state) => state.auth.userInfo?.role);
@@ -42,30 +51,40 @@ const PetOwnerResponse = () => {
     : false;
 
   // Check if user has already reviewed this doctor
-  const hasAlreadyReviewed = appointment?.doctorId?.reviews?.some(
+  const hasAlreadyReviewedDoctor = appointment?.doctorId?.reviews?.some(
     review => review.user?.toString() === currentUserId?.toString()
   );
 
-  // Check if can review (appointment completed and not already reviewed)
-  const canReview = appointment?.status === "Completed" && 
-                    !hasAlreadyReviewed && 
-                    isOwner;
+  // Check if user has already submitted a platform review for this appointment
+  const hasAlreadySubmittedPlatformReview = appointment?.hasPlatformReview || false;
 
-  // Handle review submission
-  const handleSubmitReview = async (e) => {
+  // Check if can review doctor (appointment completed and not already reviewed)
+  const canReviewDoctor = appointment?.status === "Completed" && 
+                          !hasAlreadyReviewedDoctor && 
+                          !doctorReviewSubmitted &&
+                          isOwner;
+
+  // Check if can submit platform review (appointment completed and not already submitted)
+  const canSubmitPlatformReview = appointment?.status === "Completed" && 
+                                  !hasAlreadySubmittedPlatformReview && 
+                                  !platformReviewSubmitted &&
+                                  isOwner;
+
+  // Handle doctor review submission
+  const handleSubmitDoctorReview = async (e) => {
     e.preventDefault();
     
-    if (!reviewComment.trim()) {
+    if (!doctorReviewComment.trim()) {
       toast.error("Please enter a review comment");
       return;
     }
 
-    setIsSubmittingReview(true);
+    setIsSubmittingDoctorReview(true);
 
     try {
       const reviewData = {
-        rating: reviewRating,
-        comment: reviewComment.trim()
+        rating: doctorReviewRating,
+        comment: doctorReviewComment.trim()
       };
 
       const response = await addDoctorReview({
@@ -73,21 +92,68 @@ const PetOwnerResponse = () => {
         data: reviewData
       }).unwrap();
 
-      toast.success("Review submitted successfully!");
-      setShowReviewForm(false);
-      setReviewRating(5);
-      setReviewComment("");
+      toast.success("Doctor review submitted successfully!");
+      setShowDoctorReviewForm(false);
+      setDoctorReviewSubmitted(true);
+      setDoctorReviewRating(5);
+      setDoctorReviewComment("");
       refetch();
     } catch (error) {
-      toast.error(error?.data?.error || error?.data?.message || "Failed to submit review");
-      console.error("Review error:", error);
+      // Show the exact error message from backend
+      const errorMessage = error?.data?.error || error?.data?.message || "Failed to submit review";
+      toast.error(errorMessage);
+      console.error("Doctor review error:", error);
     } finally {
-      setIsSubmittingReview(false);
+      setIsSubmittingDoctorReview(false);
+    }
+  };
+
+  // Handle platform review submission - SHOW EXACT BACKEND ERROR
+  const handleSubmitPlatformReview = async (e) => {
+    e.preventDefault();
+    
+    if (!platformReviewComment.trim()) {
+      toast.error("Please enter a review comment");
+      return;
+    }
+
+    setIsSubmittingPlatformReview(true);
+
+    try {
+      const reviewData = {
+        appointmentId: appointment._id,
+        doctorId: appointment.doctorId?._id,
+        rating: platformReviewRating,
+        comment: platformReviewComment.trim()
+      };
+
+      const response = await createPlatformReview(reviewData).unwrap();
+
+      toast.success("Platform review submitted successfully! Thank you for your feedback.");
+      setShowPlatformReviewForm(false);
+      setPlatformReviewSubmitted(true);
+      setPlatformReviewRating(5);
+      setPlatformReviewComment("");
+      refetch();
+    } catch (error) {
+      // Show the exact error message from backend - no custom messages
+      const errorMessage = error?.data?.error || error?.data?.message || "Failed to submit platform review";
+      toast.error(errorMessage);
+      console.error("Platform review error:", error);
+      
+      // Don't close the form on error - let user try again or see the error
+      // Only close if it's a duplicate review error from backend
+      if (errorMessage.includes("already reviewed")) {
+        setShowPlatformReviewForm(false);
+        setPlatformReviewSubmitted(true);
+      }
+    } finally {
+      setIsSubmittingPlatformReview(false);
     }
   };
 
   // Star rating component
-  const StarRating = ({ rating, onRatingChange, hoverRating, onHoverChange, readOnly = false }) => {
+  const StarRating = ({ rating, onRatingChange, hoverRating, onHoverChange, readOnly = false, size = "text-2xl" }) => {
     const stars = [1, 2, 3, 4, 5];
     
     return (
@@ -100,7 +166,7 @@ const PetOwnerResponse = () => {
             onMouseEnter={() => !readOnly && onHoverChange(star)}
             onMouseLeave={() => !readOnly && onHoverChange(0)}
             disabled={readOnly}
-            className={`text-2xl transition-transform hover:scale-110 ${
+            className={`${size} transition-transform hover:scale-110 ${
               readOnly ? "cursor-default" : "cursor-pointer"
             }`}
           >
@@ -369,12 +435,12 @@ const PetOwnerResponse = () => {
                       </div>
                     )}
 
-                    {/* Review Button (Only for completed appointments) */}
-                    {canReview && (
+                    {/* Doctor Review Button (Only for completed appointments) */}
+                    {canReviewDoctor && (
                       <div className="pt-4 border-t border-gray-200">
-                        {!showReviewForm ? (
+                        {!showDoctorReviewForm ? (
                           <button
-                            onClick={() => setShowReviewForm(true)}
+                            onClick={() => setShowDoctorReviewForm(true)}
                             className="w-full px-4 py-3 bg-navigray hover:bg-navigray-dark text-white rounded-lg font-medium transition-colors flex items-center justify-center"
                           >
                             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,21 +450,21 @@ const PetOwnerResponse = () => {
                           </button>
                         ) : (
                           <div className="bg-white rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-medium text-gray-900 mb-3">Write a Review</h5>
-                            <form onSubmit={handleSubmitReview}>
+                            <h5 className="font-medium text-gray-900 mb-3">Write a Doctor Review</h5>
+                            <form onSubmit={handleSubmitDoctorReview}>
                               {/* Star Rating */}
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Your Rating
                                 </label>
                                 <StarRating
-                                  rating={reviewRating}
-                                  onRatingChange={setReviewRating}
-                                  hoverRating={hoverRating}
-                                  onHoverChange={setHoverRating}
+                                  rating={doctorReviewRating}
+                                  onRatingChange={setDoctorReviewRating}
+                                  hoverRating={hoverDoctorRating}
+                                  onHoverChange={setHoverDoctorRating}
                                 />
                                 <div className="mt-1 text-sm text-gray-500">
-                                  {reviewRating} star{reviewRating !== 1 ? 's' : ''}
+                                  {doctorReviewRating} star{doctorReviewRating !== 1 ? 's' : ''}
                                 </div>
                               </div>
 
@@ -408,8 +474,8 @@ const PetOwnerResponse = () => {
                                   Your Review
                                 </label>
                                 <textarea
-                                  value={reviewComment}
-                                  onChange={(e) => setReviewComment(e.target.value)}
+                                  value={doctorReviewComment}
+                                  onChange={(e) => setDoctorReviewComment(e.target.value)}
                                   placeholder="Share your experience with this doctor..."
                                   rows="4"
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
@@ -421,10 +487,10 @@ const PetOwnerResponse = () => {
                               <div className="flex gap-2">
                                 <button
                                   type="submit"
-                                  disabled={isSubmittingReview}
+                                  disabled={isSubmittingDoctorReview}
                                   className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                                 >
-                                  {isSubmittingReview ? (
+                                  {isSubmittingDoctorReview ? (
                                     <>
                                       <Loader small />
                                       <span className="ml-2">Submitting...</span>
@@ -436,9 +502,9 @@ const PetOwnerResponse = () => {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setShowReviewForm(false);
-                                    setReviewComment("");
-                                    setReviewRating(5);
+                                    setShowDoctorReviewForm(false);
+                                    setDoctorReviewComment("");
+                                    setDoctorReviewRating(5);
                                   }}
                                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
@@ -451,13 +517,24 @@ const PetOwnerResponse = () => {
                       </div>
                     )}
 
-                    {hasAlreadyReviewed && (
+                    {hasAlreadyReviewedDoctor && (
                       <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
                         <p className="text-sm text-green-700 flex items-center">
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           You have already reviewed this doctor
+                        </p>
+                      </div>
+                    )}
+
+                    {doctorReviewSubmitted && (
+                      <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm text-green-700 flex items-center">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Doctor review submitted successfully! Thank you for your feedback.
                         </p>
                       </div>
                     )}
@@ -473,6 +550,134 @@ const PetOwnerResponse = () => {
                     </Link>
                   </div>
                 </div>
+
+                {/* Platform Review Section */}
+                {canSubmitPlatformReview && (
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-6 h-6 mr-2 text-navigray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      Platform Review
+                    </h3>
+
+                    {!showPlatformReviewForm ? (
+                      <button
+                        onClick={() => setShowPlatformReviewForm(true)}
+                        className="w-full px-4 py-3 bg-navigray hover:bg-navigray-dark text-white rounded-lg font-medium transition-colors flex items-center justify-center"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                        Rate Your Experience
+                      </button>
+                    ) : (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <h5 className="font-medium text-gray-900 mb-3">Share Your Feedback</h5>
+                        <form onSubmit={handleSubmitPlatformReview}>
+                          {/* Star Rating */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Your Rating
+                            </label>
+                            <StarRating
+                              rating={platformReviewRating}
+                              onRatingChange={setPlatformReviewRating}
+                              hoverRating={hoverPlatformRating}
+                              onHoverChange={setHoverPlatformRating}
+                            />
+                            <div className="mt-1 text-sm text-gray-500">
+                              {platformReviewRating} star{platformReviewRating !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+
+                          {/* Comment */}
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Your Review
+                            </label>
+                            <textarea
+                              value={platformReviewComment}
+                              onChange={(e) => setPlatformReviewComment(e.target.value)}
+                              placeholder="Tell us about your overall experience with VettKoneckt..."
+                              rows="4"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray"
+                              required
+                            />
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              disabled={isSubmittingPlatformReview}
+                              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            >
+                              {isSubmittingPlatformReview ? (
+                                <>
+                                  <Loader small />
+                                  <span className="ml-2">Submitting...</span>
+                                </>
+                              ) : (
+                                'Submit Review'
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowPlatformReviewForm(false);
+                                setPlatformReviewComment("");
+                                setPlatformReviewRating(5);
+                              }}
+                              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {platformReviewSubmitted && (
+                  <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-lg font-medium text-green-800">Thank You!</h3>
+                        <p className="mt-2 text-sm text-green-700">
+                          Your platform review has been submitted successfully. 
+                          We appreciate your feedback!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {hasAlreadySubmittedPlatformReview && !platformReviewSubmitted && (
+                  <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-lg font-medium text-green-800">Thank You!</h3>
+                        <p className="mt-2 text-sm text-green-700">
+                          {typeof hasAlreadySubmittedPlatformReview === 'string' 
+                            ? hasAlreadySubmittedPlatformReview 
+                            : "You have already submitted a platform review for this appointment. We appreciate your feedback!"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Owner Information */}
                 <div className="bg-gray-50 rounded-xl p-6">

@@ -149,7 +149,6 @@ const Navigation = () => {
               icon: <FaDog className="w-6 h-6" />,
               label: "My Pets"
             },
-
             {
               to: "/petowner/owner-appointments",
               icon: <AiOutlineCalendar className="w-6 h-6" />,
@@ -191,10 +190,14 @@ const Navigation = () => {
                 <Link
                   key={index}
                   to={link.to}
-                  className="flex items-center px-4 py-2 rounded-lg hover:bg-navigray hover:text-white transition-all text-sm font-medium text-gray-700"
+                  className="group flex items-center px-4 py-2 rounded-lg hover:bg-navigray transition-all text-sm font-medium text-gray-700"
                 >
-                  <span className="mr-2 text-navigray group-hover:text-white transition-colors">{link.icon}</span>
-                  <span className="group-hover:text-white transition-colors">{link.label}</span>
+                  <span className="mr-2 text-navigray group-hover:text-white transition-colors duration-300">
+                    {link.icon}
+                  </span>
+                  <span className="group-hover:text-white transition-colors duration-300">
+                    {link.label}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -204,19 +207,21 @@ const Navigation = () => {
               <div className="hidden md:block relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-navigray hover:text-white transition-all group text-gray-700"
+                  className="group flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-navigray transition-all text-gray-700"
                 >
                   <div className="w-8 h-8 bg-navigray rounded-full flex items-center justify-center border-2 border-navigray-light/20 group-hover:border-white/40 transition-all">
                     <AiOutlineUser className="text-lg text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium truncate max-w-[150px] text-gray-700 group-hover:text-white">
+                    <p className="text-sm font-medium truncate max-w-[150px] text-gray-700 group-hover:text-white transition-colors duration-300">
                       {userInfo.fullName}
                     </p>
-                    <p className="text-xs text-gray-500 group-hover:text-white/80">{userInfo.role}</p>
+                    <p className="text-xs text-gray-500 group-hover:text-white/80 transition-colors duration-300">
+                      {userInfo.role}
+                    </p>
                   </div>
                   <svg
-                    className={`w-4 h-4 text-gray-500 group-hover:text-white transition-transform duration-300 ${profileDropdownOpen ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-gray-500 group-hover:text-white transition-all duration-300 ${profileDropdownOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -231,14 +236,14 @@ const Navigation = () => {
                     <div className="py-1">
                       <Link
                         to={`/${userInfo.role.toLowerCase()}/profile`}
-                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray hover:text-white transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray hover:text-white transition-colors duration-300"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         Profile Settings
                       </Link>
                       <button
                         onClick={logoutHandler}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-300 border-t border-gray-100"
                       >
                         Logout
                       </button>
@@ -255,7 +260,7 @@ const Navigation = () => {
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   className="p-2 rounded-lg hover:bg-navigray transition-all group"
                 >
-                  <div className="w-8 h-8 bg-navigray rounded-full flex items-center justify-center border-2 border-navigray-light/20">
+                  <div className="w-8 h-8 bg-navigray rounded-full flex items-center justify-center border-2 border-navigray-light/20 group-hover:border-white/40 transition-all">
                     <AiOutlineUser className="text-lg text-white" />
                   </div>
                 </button>
@@ -270,7 +275,7 @@ const Navigation = () => {
                     <div className="py-1">
                       <Link
                         to={`/${userInfo.role.toLowerCase()}/profile`}
-                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray hover:text-white transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-navigray hover:text-white transition-colors duration-300"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         Profile Settings
@@ -280,7 +285,7 @@ const Navigation = () => {
                           logoutHandler();
                           setProfileDropdownOpen(false);
                         }}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-300 border-t border-gray-100"
                       >
                         Logout
                       </button>
@@ -301,13 +306,13 @@ const Navigation = () => {
               <Link
                 key={index}
                 to={link.to}
-                className="flex flex-col items-center justify-center px-3 py-1 rounded-lg hover:text-navigray transition-all group"
+                className="group flex flex-col items-center justify-center px-3 py-1 rounded-lg hover:text-navigray transition-all"
                 onClick={() => setProfileDropdownOpen(false)}
               >
-                <span className="text-xl group-hover:scale-110 transition-transform text-gray-500 group-hover:text-navigray">
+                <span className="text-xl transition-all duration-300 text-gray-500 group-hover:text-navigray group-hover:scale-110">
                   {link.icon}
                 </span>
-                <span className="text-[10px] mt-0.5 font-medium text-gray-500 group-hover:text-navigray">
+                <span className="text-[10px] mt-0.5 font-medium text-gray-500 group-hover:text-navigray transition-colors duration-300">
                   {link.label}
                 </span>
               </Link>

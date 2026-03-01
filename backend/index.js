@@ -13,6 +13,8 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js"
 import connectDB from "./config/db.js";
+import platformReviewRoutes from "./routes/plateformReviewRouter.js"
+import customerSupportRoutes from "./routes/customerSupportRouter.js"
 
 
 const port = process.env.PORT || 5000;
@@ -37,6 +39,8 @@ app.use("/api/pets", petRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/video", videoRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reviews",platformReviewRoutes);
+app.use("/api/customersupport",customerSupportRoutes);
 
 const __dirname = path.resolve();
 app.use("/uploads", express.static(path.join(__dirname + "/uploads")));

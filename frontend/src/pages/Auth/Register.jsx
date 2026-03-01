@@ -12,6 +12,7 @@ const Register = () => {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const navigate = useNavigate();
   const [register, { isLoading }] = useRegisterMutation();
@@ -27,19 +28,64 @@ const Register = () => {
     }
   }, [navigate, redirect, userInfo]);
 
+  // Password validation function
+  const validatePassword = (pass) => {
+    const errors = [];
+    
+    if (pass.length < 6) {
+      errors.push("At least 6 characters");
+    }
+    
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pass)) {
+      errors.push("At least one special character (!@#$%^&*)");
+    }
+    
+    if (!/[A-Z]/.test(pass)) {
+      errors.push("At least one uppercase letter");
+    }
+    
+    if (!/[a-z]/.test(pass)) {
+      errors.push("At least one lowercase letter");
+    }
+    
+    if (!/[0-9]/.test(pass)) {
+      errors.push("At least one number");
+    }
+    
+    return errors;
+  };
+
+  // Update password errors when password changes
+  useEffect(() => {
+    setPasswordErrors(validatePassword(password));
+  }, [password]);
+
+  const isPasswordValid = () => {
+    return passwordErrors.length === 0 && password.length > 0;
+  };
+
   const submitHandler = async (e) => {
     e.preventDefault();
+    
+    // Validate password before submission
+    const errors = validatePassword(password);
+    if (errors.length > 0) {
+      toast.error("Please meet all password requirements");
+      return;
+    }
+    
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
-    } else {
-      try {
-        const res = await register({ fullName, email, phone, password, role }).unwrap();
-        navigate(redirect);
-        toast.success("User successfully registered");
-      } catch (error) {
-        console.error(error);
-        toast.error(error?.data?.message || error.message);
-      }
+      return;
+    }
+    
+    try {
+      const res = await register({ fullName, email, phone, password, role }).unwrap();
+      navigate(redirect);
+      toast.success("User successfully registered");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.data?.message || error.message);
     }
   };
 
@@ -152,20 +198,67 @@ const Register = () => {
                 <input
                   type="password"
                   id="password"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navigray focus:border-navigray focus:outline-none transition-all"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-navigray focus:outline-none transition-all ${
+                    password && !isPasswordValid()
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                      : password && isPasswordValid()
+                      ? 'border-green-300 focus:border-green-500 focus:ring-green-200'
+                      : 'border-gray-300 focus:border-navigray'
+                  }`}
                   placeholder="Create a strong password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <ul className="text-xs text-gray-500 mt-2 space-y-1">
-                  <li className="flex items-center">
-                    <svg className={`w-4 h-4 mr-2 ${password.length >= 8 ? 'text-green-500' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    At least 8 characters
-                  </li>
-                </ul>
+                
+                {/* Password Requirements Checklist */}
+                {password && (
+                  <div className="bg-gray-50 rounded-lg p-3 mt-2 border border-gray-200">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Password must contain:</p>
+                    <ul className="space-y-1.5">
+                      <li className="flex items-center text-xs">
+                        <span className={`mr-2 ${password.length >= 6 ? 'text-green-500' : 'text-gray-300'}`}>
+                          {password.length >= 6 ? '✓' : '○'}
+                        </span>
+                        <span className={password.length >= 6 ? 'text-green-700' : 'text-gray-500'}>
+                          At least 6 characters
+                        </span>
+                      </li>
+                      <li className="flex items-center text-xs">
+                        <span className={`mr-2 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-500' : 'text-gray-300'}`}>
+                          {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? '✓' : '○'}
+                        </span>
+                        <span className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-700' : 'text-gray-500'}>
+                          At least one special character (!@#$%^&*)
+                        </span>
+                      </li>
+                      <li className="flex items-center text-xs">
+                        <span className={`mr-2 ${/[A-Z]/.test(password) ? 'text-green-500' : 'text-gray-300'}`}>
+                          {/[A-Z]/.test(password) ? '✓' : '○'}
+                        </span>
+                        <span className={/[A-Z]/.test(password) ? 'text-green-700' : 'text-gray-500'}>
+                          At least one uppercase letter
+                        </span>
+                      </li>
+                      <li className="flex items-center text-xs">
+                        <span className={`mr-2 ${/[a-z]/.test(password) ? 'text-green-500' : 'text-gray-300'}`}>
+                          {/[a-z]/.test(password) ? '✓' : '○'}
+                        </span>
+                        <span className={/[a-z]/.test(password) ? 'text-green-700' : 'text-gray-500'}>
+                          At least one lowercase letter
+                        </span>
+                      </li>
+                      <li className="flex items-center text-xs">
+                        <span className={`mr-2 ${/[0-9]/.test(password) ? 'text-green-500' : 'text-gray-300'}`}>
+                          {/[0-9]/.test(password) ? '✓' : '○'}
+                        </span>
+                        <span className={/[0-9]/.test(password) ? 'text-green-700' : 'text-gray-500'}>
+                          At least one number
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password */}
@@ -179,6 +272,8 @@ const Register = () => {
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-navigray focus:outline-none transition-all ${
                     confirmPassword && password !== confirmPassword
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                      : confirmPassword && password === confirmPassword && isPasswordValid()
+                      ? 'border-green-300 focus:border-green-500 focus:ring-green-200'
                       : 'border-gray-300 focus:border-navigray'
                   }`}
                   placeholder="Re-enter your password"
@@ -191,11 +286,47 @@ const Register = () => {
                     Passwords do not match
                   </p>
                 )}
+                {confirmPassword && password === confirmPassword && isPasswordValid() && (
+                  <p className="text-sm text-green-600 mt-1 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Passwords match
+                  </p>
+                )}
               </div>
+
+              {/* Password Strength Indicator */}
+              {password && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-700">Password strength:</span>
+                    <span className={`text-xs font-medium ${
+                      passwordErrors.length === 0 ? 'text-green-600' :
+                      passwordErrors.length <= 2 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {passwordErrors.length === 0 ? 'Strong' :
+                       passwordErrors.length <= 2 ? 'Medium' :
+                       'Weak'}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-300 ${
+                        passwordErrors.length === 0 ? 'bg-green-500' :
+                        passwordErrors.length <= 2 ? 'bg-yellow-500' :
+                        'bg-red-500'
+                      }`}
+                      style={{ width: `${Math.max(0, 100 - (passwordErrors.length * 20))}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button
-                disabled={isLoading}
+                disabled={isLoading || (password && !isPasswordValid())}
                 type="submit"
                 className="w-full bg-navigray text-white py-3 px-4 rounded-lg font-medium hover:bg-navigray-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navigray disabled:opacity-70 disabled:cursor-not-allowed mt-6"
               >

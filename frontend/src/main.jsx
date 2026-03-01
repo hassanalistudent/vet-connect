@@ -41,12 +41,19 @@ import AdminAppointmentDetails from "./pages/Admin/AdminAppointmentDetails.jsx";
 import DoctorDashboard from "./pages/Appointments/DoctorDashBoard.jsx";
 import AdminDashboard from "./pages/Admin/AdminDashBoard.jsx";
 import Home from "./pages/Home.jsx";
+import CustomerSupport from "./pages/CustomerSupport.jsx";
+import MyTickets from "./pages/MyTickets.jsx";
+import TicketDetails from "./pages/TicketDetails.jsx";
+import AdminTickets from "./pages/Admin/AdminTickets.jsx";
 
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<App />}>
       <Route index={true}  path="/" element={<Home/>}/>
+      <Route path="/contact" element={<CustomerSupport/>}/>
+      <Route path="/my-tickets" element={<MyTickets/>}/>
+      <Route path="/tickets/:id" element={<TicketDetails/>}/>
       <Route path="/login" element={<Login/>}/>
       <Route path="/register" element={<Register/>}/>
       <Route path="/verify-email" element={<AuthVerification />}/>
@@ -81,6 +88,7 @@ const router = createBrowserRouter(
           <Route  path="allappointments" element={<AdminAllAppointments/>}/>
           <Route  path=":id/appointment-details" element={<AdminAppointmentDetails/>}/>
           <Route  path="dashboard" element={<AdminDashboard/>}/>
+          <Route  path="tickets" element={<AdminTickets/>}/>
       </Route>
       </Route>
       </Route>

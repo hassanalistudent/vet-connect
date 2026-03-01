@@ -7,6 +7,7 @@ import {
 } from "../../redux/api/userApiSlice";
 import { toast } from "react-toastify";
 import UserPets from "../Pets/UserPets";
+import { Link } from "react-router-dom";
 
 const ProfileTabs = ({ userInfo, role }) => {
   const [activeTab, setActiveTab] = useState(1);
@@ -399,8 +400,8 @@ const ProfileTabs = ({ userInfo, role }) => {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Profile Status</span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${profile?.petOwnerProfile
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
                       }`}>
                       {profile?.petOwnerProfile ? 'Complete' : 'Incomplete'}
                     </span>
@@ -460,9 +461,12 @@ const ProfileTabs = ({ userInfo, role }) => {
                 <p className="text-white/80 mb-4">
                   Our support team is here to help you with any questions about your pets or appointments.
                 </p>
-                <button className="w-full bg-white text-navigray py-2 px-4 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                <Link
+                  to="/contact"
+                  className="block w-full bg-white text-navigray py-2 px-4 rounded-lg font-medium hover:bg-gray-100 transition-colors text-center"
+                >
                   Contact Support
-                </button>
+                </Link>
               </div>
             </div>
           </div>

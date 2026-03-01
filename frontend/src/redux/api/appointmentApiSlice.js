@@ -116,6 +116,16 @@ export const appointmentApiSlice = apiSlice.injectEndpoints({
         { type: "Appointment", id: appointmentId },
       ],
     }),
+    //notify doctors again
+    notifyDoctorsAgain: builder.mutation({
+      query: (appointmentIds) => ({
+        url: `${APPOINTMENTS_URL}/notify-doctors`,
+        method: "POST",
+        body: { appointmentIds }, 
+      }),
+      invalidatesTags: ["Appointments"], 
+    }),
+
   }),
 });
 
@@ -130,4 +140,5 @@ export const {
   useOwnerResponseMutation,
   useMarkAppointmentPaidMutation,
   useCompleteAppointmentMutation,
+  useNotifyDoctorsAgainMutation,
 } = appointmentApiSlice;

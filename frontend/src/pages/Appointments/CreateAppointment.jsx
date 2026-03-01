@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Loader from "../../components/Loader";
 import Message from "../../components/Message";
@@ -20,10 +20,10 @@ const CreateAppointment = () => {
   // Get current user's profile to check completion status
   const { data: userProfile, isLoading: profileLoading } = useGetProfileQuery();
   const { data: pets = [], isLoading: petsLoading, error: petsError } = useGetUserPetsQuery();
-  
+
   // Get doctor's user details - this returns the user object (which may have doctor profile populated)
   const { data: doctorUser, isLoading: doctorLoading, error: doctorError } = useGetUserDetailsQuery(doctorId);
-  
+
   const [createAppointment, { isLoading: creating }] = useCreateAppointmentMutation();
 
   const [formData, setFormData] = useState({
@@ -35,6 +35,10 @@ const CreateAppointment = () => {
   });
 
   const [selectedServiceDetails, setSelectedServiceDetails] = useState(null);
+  
+  // Use ref to track initial mount and prevent infinite loop
+  const isInitialMount = useRef(true);
+  const prevAppointmentType = useRef('');
 
   // Check if profile is complete
   const isProfileComplete = userProfile;
@@ -45,7 +49,7 @@ const CreateAppointment = () => {
   // Get available appointment types based on doctor's services
   const getAvailableAppointmentTypes = () => {
     if (!doctorProfile?.servicesOffered) return [];
-    
+
     const types = [];
     if (doctorProfile.servicesOffered.videoConsultation?.available) {
       types.push({
@@ -79,35 +83,50 @@ const CreateAppointment = () => {
   // Get doctor's name from user object
   const doctorName = doctorUser?.fullName || doctorUser?.username || "the veterinarian";
 
-  // Update charges when appointment type changes
+  // Update charges when appointment type changes - FIXED
   useEffect(() => {
-    if (formData.appointmentType && availableTypes.length > 0) {
-      const selectedType = availableTypes.find(
-        type => type.value === formData.appointmentType
-      );
-      
-      if (selectedType) {
-        setSelectedServiceDetails(selectedType);
-        
-        // If it's a home visit, check if home visit has its own charges
-        if (formData.appointmentType === "Home Visit" && doctorProfile.homeVisitDetails?.charges) {
-          setFormData(prev => ({
-            ...prev,
-            charges: doctorProfile.homeVisitDetails.charges
-          }));
-        } else {
-          // Use charges from servicesOffered
-          setFormData(prev => ({
-            ...prev,
-            charges: selectedType.details?.charges || ""
-          }));
-        }
-      }
-    } else {
+    // Skip on initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Skip if appointment type hasn't changed
+    if (prevAppointmentType.current === formData.appointmentType) {
+      return;
+    }
+
+    // Update the ref with current appointment type
+    prevAppointmentType.current = formData.appointmentType;
+
+    // Skip if no appointment type selected
+    if (!formData.appointmentType) {
       setSelectedServiceDetails(null);
       setFormData(prev => ({ ...prev, charges: "" }));
+      return;
     }
-  }, [formData.appointmentType, availableTypes, doctorProfile.homeVisitDetails]);
+
+    if (availableTypes.length === 0) return;
+
+    const selectedType = availableTypes.find(
+      type => type.value === formData.appointmentType
+    );
+
+    if (selectedType) {
+      setSelectedServiceDetails(selectedType);
+
+      // Calculate the new charges
+      let newCharges = "";
+      if (formData.appointmentType === "Home Visit" && doctorProfile.homeVisitDetails?.charges) {
+        newCharges = doctorProfile.homeVisitDetails.charges;
+      } else {
+        newCharges = selectedType.details?.charges || "";
+      }
+
+      // Update charges - no need for conditional update since we already prevented infinite loop
+      setFormData(prev => ({ ...prev, charges: newCharges }));
+    }
+  }, [formData.appointmentType, availableTypes, doctorProfile.homeVisitDetails]); // Removed formData.charges from dependencies
 
   const handlePetChange = (e) => {
     setFormData((prev) => ({ ...prev, petId: e.target.value }));
@@ -115,7 +134,7 @@ const CreateAppointment = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Double-check profile completion before submission
     if (!isProfileComplete) {
       toast.error("Please complete your profile first");
@@ -147,10 +166,10 @@ const CreateAppointment = () => {
 
   // Show loader while profile or doctor data is loading
   if (profileLoading || petsLoading || doctorLoading) return <Loader />;
-  
+
   // Show error if pets loading failed
   if (petsError) return <Message variant="danger">Error loading pets</Message>;
-  
+
   // Show error if doctor loading failed
   if (doctorError) return <Message variant="danger">Error loading doctor information</Message>;
 
@@ -181,7 +200,7 @@ const CreateAppointment = () => {
                   No Services Available
                 </h3>
                 <p className="text-gray-600 max-w-md mx-auto">
-                  The doctor you're trying to book hasn't configured their services yet. 
+                  The doctor you're trying to book hasn't configured their services yet.
                   Please try another doctor or contact support.
                 </p>
               </div>
@@ -294,7 +313,7 @@ const CreateAppointment = () => {
               Schedule a visit for your pet with {doctorName}
             </p>
           </div>
-          
+
           {/* Back Button */}
           <button
             onClick={() => navigate(-1)}
@@ -312,16 +331,16 @@ const CreateAppointment = () => {
           <div className="bg-gradient-to-r from-navigray to-navigray-dark px-6 py-4">
             <h2 className="text-xl font-bold text-white">Doctor Information</h2>
           </div>
-          
+
           <div className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Doctor Image */}
               <div className="flex-shrink-0">
                 <div className="w-32 h-32 rounded-xl overflow-hidden border-4 border-navigray/20 shadow-md">
                   {doctorProfile.image ? (
-                    <img 
-                      src={doctorProfile.image} 
-                      alt={doctorName} 
+                    <img
+                      src={doctorProfile.image}
+                      alt={doctorName}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -340,7 +359,7 @@ const CreateAppointment = () => {
                   <p className="text-sm text-gray-600 mb-1">Full Name</p>
                   <p className="font-semibold text-gray-900">{doctorName}</p>
                 </div>
-                
+
                 <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-sm text-gray-600 mb-1">Specialization</p>
                   <p className="font-semibold text-gray-900">
@@ -379,7 +398,7 @@ const CreateAppointment = () => {
             <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
               <h2 className="text-xl font-bold text-white">Clinic Information</h2>
             </div>
-            
+
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {doctorProfile.clinicDetails.clinicName && (
@@ -442,7 +461,7 @@ const CreateAppointment = () => {
             <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4">
               <h2 className="text-xl font-bold text-white">Home Visit Information</h2>
             </div>
-            
+
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {doctorProfile.homeVisitDetails.areasCovered?.length > 0 && (
@@ -480,22 +499,20 @@ const CreateAppointment = () => {
               {availableTypes.map((service) => (
                 <div
                   key={service.value}
-                  className={`bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                    formData.appointmentType === service.value
+                  className={`bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all cursor-pointer ${formData.appointmentType === service.value
                       ? 'border-navigray ring-2 ring-navigray/20'
                       : 'border-gray-200 hover:border-navigray/50'
-                  }`}
+                    }`}
                   onClick={() => setFormData(prev => ({ ...prev, appointmentType: service.value }))}
                 >
                   <div className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        service.value === "Video Call" ? "bg-blue-100" :
-                        service.value === "On Clinic" ? "bg-purple-100" : "bg-indigo-100"
-                      }`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${service.value === "Video Call" ? "bg-blue-100" :
+                          service.value === "On Clinic" ? "bg-purple-100" : "bg-indigo-100"
+                        }`}>
                         <span className="text-xl">
                           {service.value === "Video Call" ? "📹" :
-                           service.value === "On Clinic" ? "🏥" : "🏠"}
+                            service.value === "On Clinic" ? "🏥" : "🏠"}
                         </span>
                       </div>
                       {formData.appointmentType === service.value && (
@@ -506,13 +523,13 @@ const CreateAppointment = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">{service.label}</h3>
-                    
+
                     {service.details?.description && (
                       <p className="text-sm text-gray-600 mb-3">{service.details.description}</p>
                     )}
-                    
+
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">Charges</span>
                       <span className="font-bold text-navigray">
@@ -543,18 +560,17 @@ const CreateAppointment = () => {
               <label className="block text-lg font-semibold text-gray-900 mb-4">
                 Select Your Pet <span className="text-red-500">*</span>
               </label>
-              
+
               {/* Pet Selection Cards */}
               {pets.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {pets.map((pet) => (
                     <div
                       key={pet._id}
-                      className={`relative cursor-pointer rounded-xl border-2 transition-all duration-200 ${
-                        formData.petId === pet._id
+                      className={`relative cursor-pointer rounded-xl border-2 transition-all duration-200 ${formData.petId === pet._id
                           ? "border-navigray bg-navigray/5 ring-2 ring-navigray/20"
                           : "border-gray-200 hover:border-navigray/50 hover:bg-gray-50"
-                      }`}
+                        }`}
                       onClick={() => setFormData(prev => ({ ...prev, petId: pet._id }))}
                     >
                       <div className="p-4">
@@ -562,9 +578,9 @@ const CreateAppointment = () => {
                           <div className="flex-shrink-0">
                             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-100">
                               {pet.petImages ? (
-                                <img 
-                                  src={pet.petImages} 
-                                  alt={pet.petName} 
+                                <img
+                                  src={pet.petImages}
+                                  alt={pet.petName}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -611,16 +627,15 @@ const CreateAppointment = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p className="text-gray-600 mb-4">No pets found. Please add a pet first.</p>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/petowner/createpet")}
+                  <Link
+                    to="/petowner/createpet"
                     className="text-navigray hover:text-navigray-dark font-medium flex items-center justify-center mx-auto"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Add New Pet
-                  </button>
+                  </Link>
                 </div>
               )}
 
@@ -638,14 +653,14 @@ const CreateAppointment = () => {
                       )}
                       <div>
                         <p className="font-medium text-gray-900">
-                          Selected: {pets.find(p => p._id === formData.petId).petName || 
-                                     pets.find(p => p._id === formData.petId).petType}
+                          Selected: {pets.find(p => p._id === formData.petId).petName ||
+                            pets.find(p => p._id === formData.petId).petType}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {pets.find(p => p._id === formData.petId).breed && 
-                           `${pets.find(p => p._id === formData.petId).breed} • `}
-                          {pets.find(p => p._id === formData.petId).age && 
-                           `${pets.find(p => p._id === formData.petId).age} years old`}
+                          {pets.find(p => p._id === formData.petId).breed &&
+                            `${pets.find(p => p._id === formData.petId).breed} • `}
+                          {pets.find(p => p._id === formData.petId).age &&
+                            `${pets.find(p => p._id === formData.petId).age} years old`}
                         </p>
                       </div>
                     </div>

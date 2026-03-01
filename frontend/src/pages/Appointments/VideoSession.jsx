@@ -1,15 +1,29 @@
-// src/pages/VideoSession.jsx - Updated WhatsApp Style
+// src/pages/VideoSession.jsx - Full Screen UI
 import React, { useState, useEffect } from "react";
 import VideoCall from "../../components/VideoCall";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetAppointmentDetailsQuery } from "../../redux/api/appointmentApiSlice";
 import Loader from "../../components/Loader";
 import moment from "moment";
+import { 
+  FaArrowLeft, 
+  FaShieldAlt, 
+  FaQuestionCircle,
+  FaUserMd,
+  FaPaw,
+  FaVideo,
+  FaCalendarAlt,
+  FaClock,
+  FaHashtag,
+  FaCheckCircle,
+  FaLock
+} from 'react-icons/fa';
 
 const VideoSession = () => {
   const { appointmentId } = useParams();
   const navigate = useNavigate();
   const [uid] = useState(() => `VC${Date.now().toString().slice(-6)}`);
+  const [showInfo, setShowInfo] = useState(false);
   
   // Fetch appointment details
   const { data, isLoading } = useGetAppointmentDetailsQuery(appointmentId);
@@ -20,165 +34,207 @@ const VideoSession = () => {
     return moment(`1970-01-01T${timeString}`).format("hh:mm A");
   };
 
+  const handleHelp = () => {
+    setShowInfo(!showInfo);
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0C1317] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-navigray-dark flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#128C7E] border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-          <h3 className="text-xl font-semibold text-white mb-2">Loading Video Session</h3>
-          <p className="text-gray-400">Preparing your consultation...</p>
+          <div className="w-20 h-20 border-4 border-navigray border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <h3 className="text-2xl font-semibold text-white mb-2">Loading Video Session</h3>
+          <p className="text-gray-400">Preparing your secure consultation...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0C1317] mt-5">
-      {/* WhatsApp-like Header */}
-      <div className="bg-[#202C33] border-b border-[#2A3942]">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left side: Back button and Appointment Info */}
-            <div className="flex items-center space-x-4">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 to-navigray-dark overflow-hidden">
+      {/* Compact Header - Fixed at top */}
+      <div className="flex-shrink-0 bg-gray-900/95 backdrop-blur-xl border-b border-white/10 px-4 py-2">
+        <div className="flex items-center justify-between">
+          {/* Left section */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all hover:scale-105"
+              title="Go back"
+            >
+              <FaArrowLeft className="text-white text-sm" />
+            </button>
+            
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-navigray to-navigray-dark rounded-full flex items-center justify-center shadow-lg">
+                <FaVideo className="text-white text-sm" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold text-white">
+                  {appointment?.petId?.petName || "Video Consultation"}
+                </h1>
+                <div className="flex items-center space-x-2 text-xs text-white/50">
+                  <span>#{appointmentId?.slice(-6) || "N/A"}</span>
+                  <span>•</span>
+                  <span>{appointment?.appointmentType || "Video Call"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right section - Compact info */}
+          <div className="flex items-center space-x-2">
+            {/* Connection Status - Dot only */}
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            </div>
+
+            {/* Quick pet info - Icon only on mobile, text on desktop */}
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-white/5 rounded-full">
+              <FaPaw className="text-white/70 text-xs" />
+              <span className="text-xs text-white/90">
+                {appointment?.petId?.petName || "Pet"}
+              </span>
+            </div>
+
+            {/* Security badge - Icon only */}
+            <div className="hidden md:flex items-center space-x-1 px-2 py-1 bg-green-500/10 rounded-full">
+              <FaLock className="text-green-400 text-xs" />
+              <span className="text-xs text-green-400">Encrypted</span>
+            </div>
+
+            {/* Help button */}
+            <button 
+              onClick={handleHelp}
+              className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+              title="Session info"
+            >
+              <FaQuestionCircle className="text-white text-sm" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Video Call Component - Takes remaining space */}
+      <div className="flex-1 relative">
+        <VideoCall appointmentId={appointmentId} uid={uid} />
+      </div>
+
+      {/* Info Overlay - Toggle with help button */}
+      {showInfo && (
+        <div className="absolute top-16 right-4 w-80 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-4 z-50">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-white flex items-center">
+              <FaShieldAlt className="mr-2 text-navigray-light" />
+              Session Information
+            </h3>
+            <button 
+              onClick={() => setShowInfo(false)}
+              className="w-6 h-6 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
+            >
+              <span className="text-white text-xs">✕</span>
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            {/* Appointment Details */}
+            <div className="bg-white/5 rounded-xl p-3">
+              <h4 className="text-xs font-medium text-white/50 mb-2">APPOINTMENT DETAILS</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-white/70 text-xs">
+                    <FaCalendarAlt className="mr-2 text-navigray-light" />
+                    Date
+                  </div>
+                  <span className="text-white text-xs font-medium">
+                    {appointment?.appointmentDate 
+                      ? moment(appointment.appointmentDate).format("MMM D, YYYY")
+                      : "Today"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-white/70 text-xs">
+                    <FaClock className="mr-2 text-navigray-light" />
+                    Time
+                  </div>
+                  <span className="text-white text-xs font-medium">
+                    {appointment?.appointmentTime 
+                      ? formatTime(appointment.appointmentTime)
+                      : "Scheduled"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-white/70 text-xs">
+                    <FaHashtag className="mr-2 text-navigray-light" />
+                    Session ID
+                  </div>
+                  <span className="text-white text-xs font-mono">{appointmentId?.slice(-8)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-white/70 text-xs">
+                    <FaUserMd className="mr-2 text-navigray-light" />
+                    Doctor
+                  </div>
+                  <span className="text-white text-xs font-medium">
+                    {appointment?.doctorId?.fullName || "Dr. Available"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-white/70 text-xs">
+                    <FaPaw className="mr-2 text-navigray-light" />
+                    Pet
+                  </div>
+                  <span className="text-white text-xs font-medium">
+                    {appointment?.petId?.petName || "Unknown"} 
+                    {appointment?.petId?.petType && ` (${appointment.petId.petType})`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Connection Info */}
+            <div className="bg-white/5 rounded-xl p-3">
+              <h4 className="text-xs font-medium text-white/50 mb-2">CONNECTION</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/70 text-xs">Your UID</span>
+                  <span className="text-white text-xs font-mono bg-white/10 px-2 py-1 rounded">{uid}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/70 text-xs">Status</span>
+                  <span className="flex items-center text-green-400 text-xs">
+                    <FaCheckCircle className="mr-1 text-xs" />
+                    Connected
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/70 text-xs">Encryption</span>
+                  <span className="text-green-400 text-xs">End-to-end encrypted</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex gap-2">
               <button
-                onClick={() => navigate(-1)}
-                className="w-10 h-10 bg-[#2A3942] hover:bg-[#37434A] rounded-full flex items-center justify-center transition-colors"
-                title="Go back"
+                onClick={() => window.open('mailto:support@vetconnect.com')}
+                className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-medium transition-colors"
               >
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
+                Contact Support
               </button>
-              
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#128C7E] to-[#075E54] rounded-full flex items-center justify-center">
-                  <span className="text-2xl">🐾</span>
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-white">
-                    {appointment?.petId?.petName || "Veterinary Consultation"}
-                  </h1>
-                  <div className="flex items-center space-x-4 text-sm">
-                    <span className="text-[#8696A0]">
-                      {appointment?.appointmentDate 
-                        ? moment(appointment.appointmentDate).format("MMM D, YYYY")
-                        : "Today"}
-                    </span>
-                    <span className="text-[#8696A0]">•</span>
-                    <span className="text-[#8696A0]">
-                      {appointment?.appointmentTime 
-                        ? formatTime(appointment.appointmentTime)
-                        : "Scheduled"}
-                    </span>
-                    <span className="text-[#8696A0]">•</span>
-                    <span className="text-[#8696A0]">
-                      Appointment #{appointmentId?.slice(-8) || "N/A"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right side: Status and Connection Info */}
-            <div className="flex items-center space-x-6">
-              {/* Pet Info Badge */}
-              {appointment?.petId && (
-                <div className="hidden md:flex items-center space-x-2 px-3 py-2 bg-[#2A3942] rounded-lg">
-                  <div className="w-8 h-8 rounded-full overflow-hidden">
-                    {appointment.petId?.petImages ? (
-                      <img 
-                        src={appointment.petId.petImages} 
-                        alt={appointment.petId.petName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-[#128C7E] flex items-center justify-center">
-                        <span className="text-white text-sm">🐕</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-white">
-                      {appointment.petId.petName || "Pet"}
-                    </div>
-                    <div className="text-xs text-[#8696A0]">
-                      {appointment.petId.petType || "Animal"}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Connection Status */}
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-green-400">Connected</span>
-              </div>
-
-              {/* UID Display */}
-              <div className="hidden lg:flex items-center space-x-2 px-3 py-2 bg-[#2A3942] rounded-lg">
-                <span className="text-sm text-[#8696A0]">UID:</span>
-                <span className="text-sm font-mono text-white font-medium">{uid}</span>
-              </div>
-
-              {/* Help Button */}
-              <button 
-                onClick={() => {
-                  // Open help modal or redirect to help page
-                  alert("Need help? Contact support at support@vetconnect.com");
-                }}
-                className="w-10 h-10 bg-[#2A3942] hover:bg-[#37434A] rounded-full flex items-center justify-center transition-colors"
-                title="Get help"
+              <button
+                onClick={() => setShowInfo(false)}
+                className="flex-1 px-3 py-2 bg-navigray hover:bg-navigray-dark rounded-xl text-white text-xs font-medium transition-colors"
               >
-                <span className="text-lg">❓</span>
+                Close
               </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Video Call Component - FIXED PROPS */}
-      <VideoCall appointmentId={appointmentId} uid={uid} />
-
-      {/* Footer Info */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0C1317]/90 backdrop-blur-sm border-t border-[#2A3942] p-4 z-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Security Info */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                <span className="text-sm text-white">🔒 End-to-end encrypted</span>
-              </div>
-              <div className="hidden md:flex items-center space-x-2">
-                <span className="text-sm text-[#8696A0]">•</span>
-                <span className="text-sm text-[#8696A0]">Your consultation is private and secure</span>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="flex items-center space-x-6 text-sm">
-              <div className="flex items-center space-x-2">
-                <span className="text-[#8696A0]">Appointment Type:</span>
-                <span className="text-white font-medium">{appointment?.appointmentType || "Video Call"}</span>
-              </div>
-              <div className="hidden lg:flex items-center space-x-2">
-                <span className="text-[#8696A0]">Doctor:</span>
-                <span className="text-white font-medium">{appointment?.doctorId?.fullName || "Dr. Available"}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-[#8696A0]">Status:</span>
-                <span className={`px-2 py-1 rounded text-xs font-bold ${
-                  appointment?.status === "Accepted" ? "bg-green-500/20 text-green-400" : 
-                  appointment?.status === "Scheduled" ? "bg-blue-500/20 text-blue-400" : 
-                  "bg-yellow-500/20 text-yellow-400"
-                }`}>
-                  {appointment?.status || "Active"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Very subtle status bar at bottom - only visible on hover */}
+      <div className="flex-shrink-0 h-1 bg-gradient-to-r from-navigray/0 via-navigray to-navigray/0 opacity-0 hover:opacity-100 transition-opacity"></div>
     </div>
   );
 };

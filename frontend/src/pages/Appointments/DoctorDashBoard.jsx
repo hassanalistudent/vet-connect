@@ -302,14 +302,14 @@ const DoctorDashboard = () => {
                 
                 {/* Name and Clinic Area */}
                 <div>
-                  <h1 className="text-3xl font-bold text-navigray">
+                  <h1 className="text-3xl font-bold text-white">
                     Dr. {user?.fullName || 'Doctor'}
                   </h1>
-                  <p className="text-navigray/90 mt-2 flex items-center">
+                  <p className="text-white/90 mt-2 flex items-center">
                     <FaMapMarkerAlt className="mr-2" />
                     {getClinicArea()}
                   </p>
-                  <p className="text-navigray/70 mt-1 flex items-center text-sm">
+                  <p className="text-white/70 mt-1 flex items-center text-sm">
                     <FaRegClock className="mr-2" />
                     {moment().format("dddd, MMMM Do YYYY")}
                   </p>

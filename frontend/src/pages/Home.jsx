@@ -9,6 +9,7 @@ import Loader from '../components/Loader';
 import Message from '../components/Message';
 import { useGetDoctorsQuery } from '../redux/api/userApiSlice';
 import { useGetProfileQuery } from '../redux/api/userApiSlice';
+import { useGetAllReviewsQuery } from '../redux/api/platformreviewApiSlice';
 import { 
   FaPaw, 
   FaUserMd, 
@@ -28,7 +29,8 @@ import {
   FaQuoteRight,
   FaDog,
   FaCat,
-  FaFish
+  FaFish,
+  FaHeadset
 } from 'react-icons/fa';
 
 // Doctor Card Component (simplified version for home screen)
@@ -133,10 +135,96 @@ const DoctorCard = ({ doctor }) => {
   );
 };
 
+// Testimonial Card with real review data
+const TestimonialCard = ({ review }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const maxLength = 150;
+  const shouldTruncate = review.comment?.length > maxLength;
+  
+  const displayComment = isExpanded 
+    ? review.comment 
+    : shouldTruncate 
+      ? `${review.comment.substring(0, maxLength)}...` 
+      : review.comment;
+
+  // Get owner name from populated ownerId
+  const ownerName = review.ownerId?.name || review.ownerId?.fullName || "Pet Owner";
+  
+  // Create a pet identifier (you might want to customize this based on your data)
+  const petInfo = review.appointmentId?.petId?.petName 
+    ? `${review.appointmentId.petId.petName}`
+    : "their pet";
+
+  return (
+    <div className="bg-white rounded-2xl p-8 shadow-lg relative border border-gray-100 hover:shadow-xl transition-all duration-300">
+      <FaQuoteRight className="absolute top-6 right-6 w-8 h-8 text-navigray/10" />
+      
+      {/* Reviewer Info */}
+      <div className="flex items-center mb-6">
+        <div className="w-12 h-12 bg-gradient-to-r from-navigray to-navigray-dark rounded-full flex items-center justify-center text-white font-bold text-xl">
+          {ownerName.charAt(0)}
+        </div>
+        <div className="ml-4">
+          <h4 className="font-semibold text-gray-900">{ownerName}</h4>
+          <p className="text-sm text-gray-500">
+            {review.doctorId?.name 
+              ? `Review for Dr. ${review.doctorId.name}`
+              : "Pet Owner"}
+          </p>
+        </div>
+      </div>
+
+      {/* Rating */}
+      <div className="flex mb-4">
+        {[...Array(5)].map((_, i) => (
+          <FaStar 
+            key={i} 
+            className={`w-5 h-5 ${i < review.rating ? 'text-yellow-500' : 'text-gray-300'}`} 
+          />
+        ))}
+      </div>
+
+      {/* Review Comment */}
+      <p className="text-gray-600 italic leading-relaxed">
+        "{displayComment}"
+      </p>
+
+      {/* Read More Button */}
+      {shouldTruncate && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-3 text-navigray hover:text-navigray-dark text-sm font-medium transition-colors"
+        >
+          {isExpanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+
+      {/* Appointment Date */}
+      {review.appointmentId?.appointmentDate && (
+        <p className="text-xs text-gray-400 mt-4">
+          Appointment: {new Date(review.appointmentId.appointmentDate).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })}
+        </p>
+      )}
+    </div>
+  );
+};
+
 // Landing Page Component for Non-Logged-in Users
 const LandingPage = () => {
   const { data: doctorsData } = useGetDoctorsQuery();
+  const { data: reviewsData, isLoading: reviewsLoading } = useGetAllReviewsQuery();
+  
   const featuredDoctors = doctorsData?.doctors?.slice(0, 3) || [];
+  
+  // Get top 3 reviews by rating
+  const topReviews = reviewsData?.reviews
+    ?.filter(review => review.comment && review.comment.trim() !== "") // Only show reviews with comments
+    ?.sort((a, b) => b.rating - a.rating) // Sort by rating (highest first)
+    ?.slice(0, 3) || []; // Take top 3
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -327,7 +415,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Testimonials - Updated with yellow stars */}
+      {/* Testimonials - Real Reviews from Platform */}
       <section className="py-20 bg-gradient-to-r from-navigray/5 to-navigray-dark/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -335,30 +423,38 @@ const LandingPage = () => {
               What Pet Parents Say
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Join thousands of satisfied pet owners who trust VettKoneckt
+              Real reviews from pet owners who trust VettKoneckt
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <TestimonialCard
-              name="Sarah Johnson"
-              pet="Max (Golden Retriever)"
-              rating={5}
-              comment="Amazing service! Found the perfect vet for my dog. The booking process was seamless and the doctor was very professional."
-            />
-            <TestimonialCard
-              name="Michael Chen"
-              pet="Luna (Siamese Cat)"
-              rating={5}
-              comment="The video consultation feature is a lifesaver. Got expert advice without leaving home. Highly recommended!"
-            />
-            <TestimonialCard
-              name="Emily Rodriguez"
-              pet="Charlie (Parrot)"
-              rating={5}
-              comment="Finally a platform that understands exotic pets too. Found a specialist for my parrot easily. Thank you VettKoneckt!"
-            />
-          </div>
+          {reviewsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader />
+            </div>
+          ) : topReviews.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {topReviews.map((review) => (
+                <TestimonialCard key={review._id} review={review} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white/50 rounded-2xl">
+              <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                <FaQuoteRight className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Reviews Yet</h3>
+              <p className="text-gray-500">Be the first to share your experience!</p>
+            </div>
+          )}
+
+          {/* Show review count if available */}
+          {reviewsData?.count > 0 && (
+            <div className="text-center mt-8">
+              <p className="text-sm text-gray-500">
+                Based on {reviewsData.count} verified reviews
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -458,27 +554,6 @@ const StepCard = ({ number, title, description, icon }) => {
     </div>
   );
 };
-
-const TestimonialCard = ({ name, pet, rating, comment }) => (
-  <div className="bg-white rounded-2xl p-8 shadow-lg relative border border-gray-100">
-    <FaQuoteRight className="absolute top-6 right-6 w-8 h-8 text-navigray/10" />
-    <div className="flex items-center mb-6">
-      <div className="w-12 h-12 bg-gradient-to-r from-navigray to-navigray-dark rounded-full flex items-center justify-center text-white font-bold text-xl">
-        {name.charAt(0)}
-      </div>
-      <div className="ml-4">
-        <h4 className="font-semibold text-gray-900">{name}</h4>
-        <p className="text-sm text-gray-500">{pet}</p>
-      </div>
-    </div>
-    <div className="flex mb-4">
-      {[...Array(5)].map((_, i) => (
-        <FaStar key={i} className={`w-5 h-5 ${i < rating ? 'text-yellow-500' : 'text-gray-300'}`} />
-      ))}
-    </div>
-    <p className="text-gray-600 italic leading-relaxed">"{comment}"</p>
-  </div>
-);
 
 const Home = () => {
   const { userInfo, isLoading: authLoading, error } = useSelector((state) => state.auth);
@@ -693,17 +768,49 @@ const Home = () => {
   // For Admin and Doctor, render their dashboards with welcome banner
   return (
     <>
-      <div className="bg-gradient-to-r from-navigray/10 to-navigray-dark/10 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-gray-600">
-            Welcome back, <span className="font-semibold text-navigray">{userInfo.fullName}</span> •{' '}
-            <span className="text-sm text-gray-500">{roleDisplay[userInfo.role] || userInfo.role}</span>
+      <div className="bg-gradient-to-r from-navigray to-navigray-dark text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h1 className="text-4xl font-bold mb-3">
+            Welcome back, {userInfo.fullName}!
+          </h1>
+          <p className="text-white/90 text-lg max-w-2xl">
+            {userInfo.role === 'Admin' 
+              ? 'Manage users, pets, and appointments from your admin dashboard.'
+              : 'Manage your appointments and profile from your doctor dashboard.'}
           </p>
         </div>
       </div>
 
-      {userInfo.role === 'Admin' && <AdminDashboard />}
-      {userInfo.role === 'Doctor' && <DoctorDashboard />}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {userInfo.role === 'Admin' && <AdminDashboard />}
+        {userInfo.role === 'Doctor' && <DoctorDashboard />}
+        
+        {/* Support Section - Footer for Admin and Doctor */}
+        <div className="mt-12 pt-8 border-t border-gray-200">
+          <div className="bg-gradient-to-r from-navigray/5 to-navigray-dark/5 rounded-2xl p-8 border border-navigray/10">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-navigray/10 rounded-full flex items-center justify-center">
+                  <FaHeadset className="w-6 h-6 text-navigray" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Need Help?</h3>
+                  <p className="text-gray-600">
+                    Our support team is here to assist you with any questions or issues.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/contact"
+                className="px-6 py-3 bg-navigray text-white rounded-lg font-medium hover:bg-navigray-dark transition-colors flex items-center whitespace-nowrap shadow-md hover:shadow-lg"
+              >
+                <FaHeadset className="mr-2" />
+                Contact Support
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 };
