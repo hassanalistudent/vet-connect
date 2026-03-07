@@ -1,17 +1,23 @@
 import nodemailer from "nodemailer";
 
-const emailUser = process.env.EMAIL_USER || "jamison.hayes@ethereal.email";
-const emailPass = process.env.EMAIL_PASS || "9m1Z73cQwN4wzChmFa";
+// ✅ Use Gmail credentials from Railway environment variables
+const emailUser = process.env.EMAIL_USER || "hassan.ali.datanalyst@gmail.com";
+const emailPass = process.env.EMAIL_PASS || "osxnsuysjvxswurg"; // no spaces
 
 console.log("📧 Email config:", {
-  service: process.env.RESEND_API_KEY ? "Resend" : "Ethereal",
+  service: "Gmail",
   userSet: !!emailUser,
 });
 
+// ✅ Gmail SMTP transporter
 export const transporter = nodemailer.createTransport({
-  host: "smtp.ethereal.email",
-  port: 587,
-  auth: { user: emailUser, pass: emailPass },
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: process.env.SMTP_PORT || 587,   // 587 for TLS, 465 for SSL
+  secure: false, // true if you use port 465
+  auth: {
+    user: emailUser,
+    pass: emailPass,
+  },
 });
 
 export { emailUser };
