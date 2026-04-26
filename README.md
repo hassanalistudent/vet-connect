@@ -28,7 +28,7 @@ The project demonstrates my ability to build and deploy a full-stack application
 ## Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/vetconnect.git
+git clone https://github.com/yourusername/vetconnect.git](https://github.com/hassanalistudent/vet-connect.git
 
 # Navigate into the project folder
 cd vetconnect
