@@ -22,8 +22,8 @@ The project demonstrates my ability to build and deploy a full-stack application
 - **Authentication**: JWT
 
 ## Screenshots
-![Appointment Dashboard](screenshot1.png)
-![Video Call Interface](screenshot2.png)
+![Home Page](Home Page.jpeg)
+![Admin Dashboard](Admin dashboard.jpeg)
 
 ## Installation
 ```bash
@@ -37,11 +37,15 @@ cd vetconnect
 npm install
 
 # Navigate into the client folder and install frontend dependencies
-cd client
+cd frontend
 npm install
 
 # Run backend server (Railway equivalent locally)
-npm run dev
+npm run backend
 
 # Run frontend (Netlify equivalent locally)
-npm start
+npm  run frontend
+
+# Run full stack (Netlify equivalent locally)
+npm  run dev
+
