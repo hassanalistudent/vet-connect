@@ -21,9 +21,8 @@ The project demonstrates my ability to build and deploy a full-stack application
 - **Email**: Resend SMTP server
 - **Authentication**: JWT
 
-## Screenshots
-![Home Page](Home Page.jpeg)
-![Admin Dashboard](Admin dashboard.jpeg)
+## Architecture
+![MVP and AWS Arch](NetlifyRailwayrout.png)
 
 ## Installation
 ```bash
